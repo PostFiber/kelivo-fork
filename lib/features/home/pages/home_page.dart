@@ -1606,10 +1606,12 @@ class _HomePageState extends State<HomePage>
         await _openContextUsagePopover();
       },
       onSend: (text) async {
+        final keepFocus = context.read<SettingsProvider>().enterToSendOnMobile;
         final result = await _controller.sendMessage(text);
         if (!mounted) return result;
         if (PlatformUtils.isMobile &&
-            result == ChatInputSubmissionResult.sent) {
+            result == ChatInputSubmissionResult.sent &&
+            !keepFocus) {
           _controller.dismissKeyboard();
         }
         return result;

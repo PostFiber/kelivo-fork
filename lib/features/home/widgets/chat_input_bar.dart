@@ -1699,6 +1699,8 @@ class _ChatInputBarState extends State<ChatInputBar>
     final submittedDraft = _snapshotDraft(submittedText);
     final submittedDraftRevision = _draftReplacementRevision;
     final submitSerial = ++_submitSerial;
+    // Read settings before the first await.
+    final enterToSend = context.read<SettingsProvider>().enterToSendOnMobile;
     _isSubmitting = true;
     final beginSubmission = widget.mediaController?.onBeginSubmission;
     Future<DraftSubmission?>? pendingSubmission;
@@ -1718,7 +1720,6 @@ class _ChatInputBarState extends State<ChatInputBar>
     // completes: that future now resolves at send time, but the draft must not
     // depend on it at all. A rejected send puts everything back below.
     setState(() {
-      _longEditorKey = GlobalKey<LongMessageEditorState>();
       _controller.clear();
       _images.removeWhere((image) => submittedImageIds.contains(image.id));
       for (final document in submittedDocuments) {
@@ -1753,9 +1754,23 @@ class _ChatInputBarState extends State<ChatInputBar>
             if (mounted) _setExpanded(false);
           });
         }
-        // Keep focus on desktop so user can continue typing
+        // Keep focus so the user can carry on typing: always on desktop, and
+        // wherever a hardware keyboard is in use. With "Enter key to send" on
+        // the field keeps focus on mobile too — a send that arrives as an IME
+        // action is unfocused by EditableText itself before onSubmitted runs,
+        // so the focus has to be put back rather than merely left alone. With
+        // a soft keyboard and the setting off the field stays dismissed: the
+        // home page's onSend callback has already hidden it by the time this
+        // runs.
+        final hardwareKeyboardInUse =
+            FocusManager.instance.highlightMode ==
+            FocusHighlightMode.traditional;
         try {
-          if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+          if (enterToSend ||
+              hardwareKeyboardInUse ||
+              Platform.isMacOS ||
+              Platform.isWindows ||
+              Platform.isLinux) {
             widget.focusNode?.requestFocus();
           }
         } catch (_) {}
