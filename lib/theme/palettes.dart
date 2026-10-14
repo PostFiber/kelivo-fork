@@ -29,6 +29,7 @@ class ThemePalettes {
   static const String terracottaId = 'terracotta';
   static const String monochromeId = 'monochrome';
   static const String docThemeId = 'doc_theme';
+  static const String inkWhiteId = 'ink_white';
 
   static const ThemePalette defaultPalette = ThemePalette(
     id: defaultId,
@@ -630,6 +631,71 @@ class ThemePalettes {
       surfaceTint: Color(0xFF00B96B),
     ),
   );
+  static const ThemePalette inkWhite = ThemePalette(
+    id: inkWhiteId,
+    zhName: '水墨白',
+    enName: 'Ink White',
+    light: ColorScheme(
+      brightness: Brightness.light,
+      primary: Colors.black,
+      onPrimary: Colors.white,
+      primaryContainer: Colors.white,
+      onPrimaryContainer: Colors.black,
+      secondary: Colors.black,
+      onSecondary: Colors.white,
+      secondaryContainer: Colors.white,
+      onSecondaryContainer: Colors.black,
+      tertiary: Colors.black,
+      onTertiary: Colors.white,
+      tertiaryContainer: Colors.white,
+      onTertiaryContainer: Colors.black,
+      error: Colors.black,
+      onError: Colors.white,
+      errorContainer: Colors.white,
+      onErrorContainer: Colors.black,
+      surface: Colors.white,
+      onSurface: Colors.black,
+      onSurfaceVariant: Colors.black,
+      outline: Colors.black,
+      outlineVariant: Colors.black,
+      shadow: Colors.white,
+      scrim: Colors.black,
+      inverseSurface: Colors.black,
+      onInverseSurface: Colors.white,
+      inversePrimary: Colors.white,
+      surfaceTint: Colors.white,
+    ),
+    dark: ColorScheme(
+      brightness: Brightness.dark,
+      primary: Colors.white,
+      onPrimary: Colors.black,
+      primaryContainer: Colors.white,
+      onPrimaryContainer: Colors.black,
+      secondary: Colors.white,
+      onSecondary: Colors.black,
+      secondaryContainer: Colors.black,
+      onSecondaryContainer: Colors.white,
+      tertiary: Colors.white,
+      onTertiary: Colors.black,
+      tertiaryContainer: Colors.black,
+      onTertiaryContainer: Colors.white,
+      error: Colors.white,
+      onError: Colors.black,
+      errorContainer: Colors.black,
+      onErrorContainer: Colors.white,
+      surface: Colors.black,
+      onSurface: Colors.white,
+      onSurfaceVariant: Colors.white,
+      outline: Colors.white,
+      outlineVariant: Colors.white,
+      shadow: Colors.black,
+      scrim: Colors.black,
+      inverseSurface: Colors.white,
+      onInverseSurface: Colors.black,
+      inversePrimary: Colors.black,
+      surfaceTint: Colors.black,
+    ),
+  );
   static const List<ThemePalette> all = <ThemePalette>[
     defaultPalette,
     blue,
@@ -640,6 +706,7 @@ class ThemePalettes {
     terracotta,
     monochrome,
     docTheme,
+    inkWhite,
   ];
 
   /// Id of the user-customized palette (built at runtime from the selected
