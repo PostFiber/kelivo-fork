@@ -2013,9 +2013,11 @@ class _ChatInputBarState extends State<ChatInputBar>
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     // Enhance hardware keyboard behavior
-    final w = MediaQuery.sizeOf(node.context!).width;
-    final isTabletOrDesktop = w >= AppBreakpoints.tablet;
-    final isIosTablet = Platform.isIOS && isTabletOrDesktop;
+    // Only the iOS-tablet arrow-repeat fix below still needs the width
+    // breakpoint; Enter handling is not gated on screen size any more.
+    final isIosTablet =
+        Platform.isIOS &&
+        MediaQuery.sizeOf(node.context!).width >= AppBreakpoints.tablet;
 
     final isDown = event is KeyDownEvent;
     final key = event.logicalKey;
@@ -2035,8 +2037,8 @@ class _ChatInputBarState extends State<ChatInputBar>
       return KeyEventResult.handled;
     }
 
-    // Enter handling on tablet/desktop: configurable shortcut
-    if (isEnter && isTabletOrDesktop) {
+    // Enter handling follows the "Enter key to send" setting.
+    if (isEnter) {
       if (!isDown) return KeyEventResult.handled; // ignore key up
       // Respect IME composition (e.g., Chinese Pinyin). If composing, let IME handle Enter.
       final composing = _controller.value.composing;
@@ -2053,28 +2055,22 @@ class _ChatInputBarState extends State<ChatInputBar>
           keys.contains(LogicalKeyboardKey.metaLeft) ||
           keys.contains(LogicalKeyboardKey.metaRight);
       final ctrlOrMeta = ctrl || meta;
-      // Get send shortcut setting
-      final sendShortcut = Provider.of<SettingsProvider>(
+      // The setting decides the key's meaning rather than a guess at where it
+      // came from: an Android IME can re-inject a physical Enter as a
+      // virtual-keyboard event, so hardware and soft keyboard Enter look
+      // identical by the time they reach this handler.
+      final enterToSend = Provider.of<SettingsProvider>(
         node.context!,
         listen: false,
-      ).desktopSendShortcut;
-      if (sendShortcut == DesktopSendShortcut.ctrlEnter) {
-        // Ctrl/Cmd+Enter to send, Enter to newline
-        if (ctrlOrMeta) {
-          unawaited(_handleSend());
-        } else if (!shift) {
-          _insertNewlineAtCursor();
-        } else {
-          // Shift+Enter also newline
-          _insertNewlineAtCursor();
-        }
+      ).enterToSendOnMobile;
+      if (!enterToSend) {
+        // Enter inserts a newline
+        _insertNewlineAtCursor();
+      } else if (shift || ctrlOrMeta) {
+        // Enter sends; Shift+Enter or Ctrl/Cmd+Enter inserts a newline.
+        _insertNewlineAtCursor();
       } else {
-        // Enter to send, Shift+Enter or Ctrl/Cmd+Enter to newline (default)
-        if (shift || ctrlOrMeta) {
-          _insertNewlineAtCursor();
-        } else {
-          unawaited(_handleSend());
-        }
+        unawaited(_handleSend());
       }
       return KeyEventResult.handled;
     }
