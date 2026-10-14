@@ -2939,6 +2939,8 @@
   "providerDetailPageProviderTypeTitle": "Provider Type",
   "displaySettingsPageChatItemDisplayTitle": "Chat item display",
   "displaySettingsPageRenderingSettingsTitle": "Rendering settings",
+  "displaySettingsPageReduceMotionTitle": "Reduce motion",
+  "displaySettingsPageReduceMotionSubtitle": "Skip transition animations to keep e-ink screens free of ghosting",
   "displaySettingsPageBehaviorStartupTitle": "Behavior & startup",
   "displaySettingsPageHapticsSettingsTitle": "Haptics",
   "assistantSettingsNoPromptPlaceholder": "No prompt yet",

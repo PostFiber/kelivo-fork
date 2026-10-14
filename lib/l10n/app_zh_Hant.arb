@@ -2447,6 +2447,8 @@
   "providerDetailPageProviderTypeTitle": "供應商類型",
   "displaySettingsPageChatItemDisplayTitle": "聊天項顯示",
   "displaySettingsPageRenderingSettingsTitle": "渲染設定",
+  "displaySettingsPageReduceMotionTitle": "減少動畫",
+  "displaySettingsPageReduceMotionSubtitle": "略過過渡動畫，避免電子墨水螢幕出現殘影",
   "displaySettingsPageBehaviorStartupTitle": "行為與啟動",
   "displaySettingsPageHapticsSettingsTitle": "觸覺回饋",
   "assistantSettingsNoPromptPlaceholder": "暫無提示詞",

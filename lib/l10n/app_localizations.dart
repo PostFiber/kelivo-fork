@@ -12673,6 +12673,18 @@ abstract class AppLocalizations {
   /// **'Rendering settings'**
   String get displaySettingsPageRenderingSettingsTitle;
 
+  /// No description provided for @displaySettingsPageReduceMotionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce motion'**
+  String get displaySettingsPageReduceMotionTitle;
+
+  /// No description provided for @displaySettingsPageReduceMotionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip transition animations to keep e-ink screens free of ghosting'**
+  String get displaySettingsPageReduceMotionSubtitle;
+
   /// No description provided for @displaySettingsPageBehaviorStartupTitle.
   ///
   /// In en, this message translates to:

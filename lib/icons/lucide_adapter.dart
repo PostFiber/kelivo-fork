@@ -139,6 +139,7 @@ class Lucide {
   static const IconData SquarePen = lucide.LucideIcons.squarePen;
   static const IconData info = lucide.LucideIcons.info;
   static const IconData Zap = lucide.LucideIcons.zap;
+  static const IconData ZapOff = lucide.LucideIcons.zapOff;
   static const IconData botMessageSquare = lucide.LucideIcons.botMessageSquare;
   static const IconData KeyRound = lucide.LucideIcons.keyRound;
   static const IconData Shuffle = lucide.LucideIcons.shuffle;

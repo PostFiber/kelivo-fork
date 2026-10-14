@@ -323,6 +323,7 @@ class SettingsProvider extends ChangeNotifier {
       'display_use_layered_surfaces_v1';
   static const String _displayUseLayeredSheetTilesKey =
       'display_use_layered_sheet_tiles_v1';
+  static const String _displayReduceMotionKey = 'display_reduce_motion_v1';
   static const String _displayAssistantBubbleFitContentKey =
       'display_assistant_bubble_fit_content_v1';
   static const String _displayAssistantBubbleSplitParagraphsKey =
@@ -533,6 +534,10 @@ class SettingsProvider extends ChangeNotifier {
   // When off, action tiles inside sheets stay the same color as the sheet.
   bool _useLayeredSheetTiles = false;
   bool get useLayeredSheetTiles => _useLayeredSheetTiles;
+
+  // When on, transient animations resolve within a single frame. E-ink friendly.
+  bool _reduceMotion = false;
+  bool get reduceMotion => _reduceMotion;
 
   // When on, assistant bubbles hug their text instead of spanning the row.
   bool _assistantBubbleFitContent = false;
@@ -1120,6 +1125,7 @@ class SettingsProvider extends ChangeNotifier {
     _useLayeredSurfaces = prefs.getBool(_displayUseLayeredSurfacesKey) ?? false;
     _useLayeredSheetTiles =
         prefs.getBool(_displayUseLayeredSheetTilesKey) ?? false;
+    _reduceMotion = prefs.getBool(_displayReduceMotionKey) ?? false;
     _assistantBubbleFitContent =
         prefs.getBool(_displayAssistantBubbleFitContentKey) ?? false;
     _assistantBubbleSplitParagraphs =
@@ -2624,6 +2630,14 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = _preferences;
     await prefs.setBool(_displayUseLayeredSurfacesKey, v);
+  }
+
+  Future<void> setReduceMotion(bool v) async {
+    if (_reduceMotion == v) return;
+    _reduceMotion = v;
+    notifyListeners();
+    final prefs = _preferences;
+    await prefs.setBool(_displayReduceMotionKey, v);
   }
 
   Future<void> setAssistantBubbleFitContent(bool v) async {
@@ -5845,6 +5859,7 @@ Requirements:
     copy._usePureBackground = _usePureBackground;
     copy._useLayeredSurfaces = _useLayeredSurfaces;
     copy._useLayeredSheetTiles = _useLayeredSheetTiles;
+    copy._reduceMotion = _reduceMotion;
     copy._assistantBubbleFitContent = _assistantBubbleFitContent;
     copy._assistantBubbleSplitParagraphs = _assistantBubbleSplitParagraphs;
     copy._chatMessageBackgroundStyle = _chatMessageBackgroundStyle;

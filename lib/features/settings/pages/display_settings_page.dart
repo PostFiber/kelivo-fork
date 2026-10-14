@@ -1680,6 +1680,16 @@ class RenderingSettingsPage extends StatelessWidget {
               _iosDivider(context),
               _iosSwitchRow(
                 context,
+                icon: Lucide.ZapOff,
+                label: l10n.displaySettingsPageReduceMotionTitle,
+                subtitle: l10n.displaySettingsPageReduceMotionSubtitle,
+                value: sp.reduceMotion,
+                onChanged: (v) =>
+                    context.read<SettingsProvider>().setReduceMotion(v),
+              ),
+              _iosDivider(context),
+              _iosSwitchRow(
+                context,
                 icon: Lucide.FoldVertical,
                 label: l10n.displaySettingsPageAutoCollapseCodeBlockTitle,
                 value: sp.autoCollapseCodeBlock,

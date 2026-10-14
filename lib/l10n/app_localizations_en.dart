@@ -6956,6 +6956,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get displaySettingsPageRenderingSettingsTitle => 'Rendering settings';
 
   @override
+  String get displaySettingsPageReduceMotionTitle => 'Reduce motion';
+
+  @override
+  String get displaySettingsPageReduceMotionSubtitle =>
+      'Skip transition animations to keep e-ink screens free of ghosting';
+
+  @override
   String get displaySettingsPageBehaviorStartupTitle => 'Behavior & startup';
 
   @override

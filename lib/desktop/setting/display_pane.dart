@@ -113,6 +113,8 @@ class _DisplaySettingsBody extends StatelessWidget {
                   _RowDivider(),
                   _ToggleRowAssistantMarkdown(),
                   _RowDivider(),
+                  _ToggleRowReduceMotion(),
+                  _RowDivider(),
                   _AutoCollapseCodeBlocksSection(),
                 ],
               ),
@@ -2563,6 +2565,21 @@ class _ToggleRowAssistantMarkdown extends StatelessWidget {
       value: sp.enableAssistantMarkdown,
       onChanged: (v) =>
           context.read<SettingsProvider>().setEnableAssistantMarkdown(v),
+    );
+  }
+}
+
+class _ToggleRowReduceMotion extends StatelessWidget {
+  const _ToggleRowReduceMotion();
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final sp = context.watch<SettingsProvider>();
+    return _ToggleRow(
+      label: l10n.displaySettingsPageReduceMotionTitle,
+      tip: l10n.displaySettingsPageReduceMotionSubtitle,
+      value: sp.reduceMotion,
+      onChanged: (v) => context.read<SettingsProvider>().setReduceMotion(v),
     );
   }
 }

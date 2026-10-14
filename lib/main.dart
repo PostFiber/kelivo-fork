@@ -13,6 +13,7 @@ import 'features/home/pages/home_page.dart';
 import 'features/migration/hive_to_sqlite_migration_page.dart';
 import 'features/migration/hive_to_sqlite_migration_service.dart';
 import 'desktop/desktop_home_page.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 import 'desktop/desktop_window_controller.dart';
@@ -1075,6 +1076,11 @@ class MyApp extends StatelessWidget {
                   child: _selectHome(),
                 ),
                 builder: (ctx, child) {
+                  // E-ink friendly: collapse transient animations into a single
+                  // frame. AnimationController cannot run at zero duration, so
+                  // this is the smallest factor that still lets one-shot
+                  // animations settle immediately.
+                  timeDilation = settings.reduceMotion ? 0.001 : 1.0;
                   final bright = Theme.of(ctx).brightness;
                   final overlay = bright == Brightness.dark
                       ? const SystemUiOverlayStyle(
@@ -1162,11 +1168,21 @@ class MyApp extends StatelessWidget {
                     });
                   }
 
+                  // Widgets that already follow the platform reduce-motion flag
+                  // (thinking sheen, frosted backdrop, GIF playback) pick this
+                  // switch up for free once the media query reports it.
+                  Widget content = child ?? const SizedBox.shrink();
+                  if (settings.reduceMotion) {
+                    content = MediaQuery(
+                      data: MediaQuery.of(
+                        ctx,
+                      ).copyWith(disableAnimations: true),
+                      child: content,
+                    );
+                  }
                   final appWithOverlays = FloatingIpadPadding(
                     child: LocalSnapshotScheduler(
-                      child: AppOverlays(
-                        child: child ?? const SizedBox.shrink(),
-                      ),
+                      child: AppOverlays(child: content),
                     ),
                   );
                   // Enforce app font as a default across the tree for Texts without explicit family

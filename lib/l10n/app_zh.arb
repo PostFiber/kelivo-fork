@@ -2413,6 +2413,8 @@
   "providerDetailPageProviderTypeTitle": "供应商类型",
   "displaySettingsPageChatItemDisplayTitle": "聊天项显示",
   "displaySettingsPageRenderingSettingsTitle": "渲染设置",
+  "displaySettingsPageReduceMotionTitle": "减少动画",
+  "displaySettingsPageReduceMotionSubtitle": "跳过过渡动画，避免墨水屏出现残影",
   "displaySettingsPageBehaviorStartupTitle": "行为与启动",
   "displaySettingsPageHapticsSettingsTitle": "触觉反馈",
   "assistantSettingsNoPromptPlaceholder": "暂无提示词",

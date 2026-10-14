@@ -6682,6 +6682,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get displaySettingsPageRenderingSettingsTitle => '渲染设置';
 
   @override
+  String get displaySettingsPageReduceMotionTitle => '减少动画';
+
+  @override
+  String get displaySettingsPageReduceMotionSubtitle => '跳过过渡动画，避免墨水屏出现残影';
+
+  @override
   String get displaySettingsPageBehaviorStartupTitle => '行为与启动';
 
   @override
@@ -19062,6 +19068,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageRenderingSettingsTitle => '渲染设置';
+
+  @override
+  String get displaySettingsPageReduceMotionTitle => '减少动画';
+
+  @override
+  String get displaySettingsPageReduceMotionSubtitle => '跳过过渡动画，避免墨水屏出现残影';
 
   @override
   String get displaySettingsPageBehaviorStartupTitle => '行为与启动';
@@ -31519,6 +31531,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageRenderingSettingsTitle => '渲染設定';
+
+  @override
+  String get displaySettingsPageReduceMotionTitle => '減少動畫';
+
+  @override
+  String get displaySettingsPageReduceMotionSubtitle => '略過過渡動畫，避免電子墨水螢幕出現殘影';
 
   @override
   String get displaySettingsPageBehaviorStartupTitle => '行為與啟動';
