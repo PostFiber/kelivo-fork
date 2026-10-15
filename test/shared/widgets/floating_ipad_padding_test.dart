@@ -72,15 +72,17 @@ void main() {
   }
 
   for (final size in [const Size(1024, 1366), const Size(390, 844)]) {
-    testWidgets('full-screen iOS view keeps its system padding at $size', (
-      tester,
-    ) async {
-      _configureView(tester, viewSize: size, displaySize: size);
-      final original = MediaQueryData.fromView(tester.view);
+    testWidgets(
+      'full-screen iOS view keeps its system padding at $size',
+      (tester) async {
+        _configureView(tester, viewSize: size, displaySize: size);
+        final original = MediaQueryData.fromView(tester.view);
 
-      expect(await _readPadding(tester), original);
-      expect(tester.takeException(), isNull);
-    }, variant: TargetPlatformVariant({TargetPlatform.iOS}));
+        expect(await _readPadding(tester), original);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant({TargetPlatform.iOS}),
+    );
   }
 }
 

@@ -128,19 +128,21 @@ void main() {
     );
   }
 
-  testWidgets('settings shortcut opens the desktop workspace manager', (
-    tester,
-  ) async {
-    await tester.pumpWidget(harness(conversation: null));
-    await tester.pumpAndSettle();
-    final action = find.byKey(DesktopWorkspaceBar.manageKey);
-    expect(action, findsOneWidget);
-    await tester.tap(action);
-    await tester.pumpAndSettle();
-    expect(find.byType(WorkspacesPane), findsOneWidget);
-    expect(find.byType(BottomSheet), findsNothing);
-    expect(tester.takeException(), isNull);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+  testWidgets(
+    'settings shortcut opens the desktop workspace manager',
+    (tester) async {
+      await tester.pumpWidget(harness(conversation: null));
+      await tester.pumpAndSettle();
+      final action = find.byKey(DesktopWorkspaceBar.manageKey);
+      expect(action, findsOneWidget);
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+      expect(find.byType(WorkspacesPane), findsOneWidget);
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
 
   testWidgets('unbound conversation can bind directly from the workspace tab', (
     tester,
@@ -165,7 +167,7 @@ void main() {
     expect(find.text('No workspace'), findsOneWidget);
     expect(find.byKey(ConversationFilesPanel.bindCtaKey), findsOneWidget);
     expect(find.byType(SegmentedTabs), findsOneWidget);
-    expect(find.byKey(DesktopWorkspaceBar.openTerminalKey), findsNothing);
+    expect(find.byKey(DesktopWorkspaceBar.revealKey), findsNothing);
   });
 
   testWidgets('shows workspace name and file tabs when bound', (tester) async {
@@ -200,11 +202,10 @@ void main() {
     expect(find.text('Attachments'), findsWidgets);
     expect(find.text('Outputs'), findsWidgets);
     expect(find.text('Workspace'), findsWidgets);
-    expect(find.byKey(DesktopWorkspaceBar.openTerminalKey), findsOneWidget);
     expect(find.byKey(DesktopWorkspaceBar.revealKey), findsOneWidget);
   });
 
-  testWidgets('hides system-terminal action when runtime lacks support', (
+  testWidgets('hides the system action when runtime lacks support', (
     tester,
   ) async {
     const conversationId = 'conv-no-term';
@@ -232,7 +233,6 @@ void main() {
     await tester.pump();
 
     expect(find.text('No Term WS'), findsOneWidget);
-    expect(find.byKey(DesktopWorkspaceBar.openTerminalKey), findsNothing);
     expect(find.byKey(DesktopWorkspaceBar.revealKey), findsNothing);
   });
 }

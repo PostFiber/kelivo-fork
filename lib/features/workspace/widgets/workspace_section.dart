@@ -14,7 +14,6 @@ import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/features/chat/utils/ensure_conversation.dart';
 import 'package:Kelivo/features/chat/utils/sheet_navigation.dart';
 import 'package:Kelivo/features/chat/widgets/tools_sheet_row.dart';
-import 'package:Kelivo/features/workspace/terminal/open_terminal.dart';
 import 'package:Kelivo/features/workspace/widgets/environment/environment_labels.dart';
 import 'package:Kelivo/features/workspace/pages/workspace_files_page.dart';
 import 'package:Kelivo/features/workspace/pages/workspace_settings_page.dart';
@@ -65,7 +64,6 @@ class WorkspaceSection extends StatefulWidget {
   );
   static const Key nameKey = ValueKey<String>('workspace-section-name');
   static const Key filesKey = ValueKey<String>('workspace-section-files');
-  static const Key terminalKey = ValueKey<String>('workspace-section-terminal');
   static const Key revealKey = ValueKey<String>('workspace-section-reveal');
   static const Key environmentKey = ValueKey<String>(
     'workspace-section-environment',
@@ -475,20 +473,6 @@ class _WorkspaceSectionState extends State<WorkspaceSection> {
               icon: Lucide.FolderOpen,
               onPressed: _openFiles,
             ),
-            if (runtime != null &&
-                (runtime.supportsSystemTerminal || runtime.supportsPty))
-              DesktopWorkspaceButton(
-                key: WorkspaceSection.terminalKey,
-                label: runtime.supportsSystemTerminal
-                    ? l10n.workspaceEntryOpenSystemTerminal
-                    : l10n.workspaceEntryTerminal,
-                icon: Lucide.Terminal,
-                onPressed: runtime.supportsSystemTerminal
-                    ? () => unawaited(
-                        _openSystemThenClose(runtime, workspace, binding),
-                      )
-                    : _openTerminal,
-              ),
             if (runtime != null)
               DesktopWorkspaceButton(
                 key: WorkspaceSection.revealKey,
@@ -586,22 +570,6 @@ class _WorkspaceSectionState extends State<WorkspaceSection> {
                 label: l10n.workspaceEntryFiles,
                 onTap: _openFiles,
               ),
-              if (runtime != null && runtime.supportsPty)
-                action(
-                  key: WorkspaceSection.terminalKey,
-                  icon: Lucide.Terminal,
-                  label: l10n.workspaceEntryTerminal,
-                  onTap: _openTerminal,
-                )
-              else if (runtime != null && runtime.supportsSystemTerminal)
-                action(
-                  key: WorkspaceSection.terminalKey,
-                  icon: Lucide.Terminal,
-                  label: l10n.workspaceEntryOpenSystemTerminal,
-                  onTap: () => unawaited(
-                    _openSystemThenClose(runtime, workspace, binding),
-                  ),
-                ),
               if (runtime != null && useDesktopWorkspaceLayout(context))
                 action(
                   key: WorkspaceSection.revealKey,
@@ -639,50 +607,10 @@ class _WorkspaceSectionState extends State<WorkspaceSection> {
     });
   }
 
-  void _openTerminal() {
-    Haptics.light();
-    final id = _conversationId;
-    _afterClose((ctx) {
-      unawaited(openTerminal(ctx, conversationId: id));
-    });
-  }
-
   Future<String> _hostCwd(Workspace workspace, WorkspaceBinding binding) async {
     final root = await context.read<WorkspaceProvider>().hostRootFor(workspace);
     final resolved = FileBrowserOps.joinInsideRoot(root, binding.cwd);
     return resolved ?? root;
-  }
-
-  Future<void> _openSystemThenClose(
-    WorkspaceRuntime runtime,
-    Workspace workspace,
-    WorkspaceBinding binding,
-  ) async {
-    try {
-      final cwd = await _hostCwd(workspace, binding);
-      if (!mounted) return;
-      _afterClose((ctx) {
-        unawaited(() async {
-          try {
-            await runtime.openInSystemTerminal(cwd);
-          } catch (error) {
-            if (!ctx.mounted) return;
-            showAppSnackBar(
-              ctx,
-              message: error.toString(),
-              type: NotificationType.error,
-            );
-          }
-        }());
-      });
-    } catch (error) {
-      if (!mounted) return;
-      showAppSnackBar(
-        context,
-        message: error.toString(),
-        type: NotificationType.error,
-      );
-    }
   }
 
   Future<void> _revealThenClose(

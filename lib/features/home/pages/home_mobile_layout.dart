@@ -18,6 +18,7 @@ import '../../../shared/animations/widgets.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../chat/widgets/frosted/chat_frosted_backdrop.dart';
 import '../../chat/widgets/chat_assistant_background.dart';
+import '../../workspace/terminal/widgets/terminal_app_bar_button.dart';
 import '../widgets/assistant_avatar.dart';
 import '../widgets/assistant_entry_actions.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
@@ -267,6 +268,7 @@ class HomeMobileScaffold extends StatelessWidget {
           semanticLabel: AppLocalizations.of(context)!.miniMapTooltip,
           icon: Lucide.Map,
         ),
+        const TerminalAppBarButton(),
         IosIconButton(
           size: 22,
           minSize: 44,

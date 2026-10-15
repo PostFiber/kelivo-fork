@@ -18,6 +18,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/workspace_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
+import '../../workspace/terminal/widgets/terminal_app_bar_button.dart';
 import '../../workspace/widgets/desktop_workspace_bar.dart';
 import '../../../shared/animations/widgets.dart';
 import '../../../shared/widgets/ios_tactile.dart';
@@ -655,6 +656,7 @@ class HomeDesktopScaffold extends StatelessWidget {
           onTap: onToggleRightSidebar,
         ),
       const SizedBox(width: 2),
+      const TerminalAppBarButton(),
       IosIconButton(
         size: 20,
         padding: const EdgeInsets.all(8),

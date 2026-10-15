@@ -106,88 +106,92 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
 
-  testWidgets('open popup adapts to window resize and keyboard insets', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(400, 700);
-    tester.view.padding = const FakeViewPadding(top: 30, bottom: 20);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetPadding);
-    addTearDown(tester.view.resetViewInsets);
-    final settings = _PricedSettings();
-    addTearDown(settings.dispose);
-    await tester.pumpWidget(
-      _harness(
-        settings: settings,
-        child: const Padding(
-          padding: EdgeInsets.all(16),
-          child: Align(alignment: Alignment.bottomRight, child: _fullStats),
+  testWidgets(
+    'open popup adapts to window resize and keyboard insets',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(400, 700);
+      tester.view.padding = const FakeViewPadding(top: 30, bottom: 20);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewInsets);
+      final settings = _PricedSettings();
+      addTearDown(settings.dispose);
+      await tester.pumpWidget(
+        _harness(
+          settings: settings,
+          child: const Padding(
+            padding: EdgeInsets.all(16),
+            child: Align(alignment: Alignment.bottomRight, child: _fullStats),
+          ),
         ),
-      ),
-    );
-    await tester.tap(find.byType(TokenDisplayWidget));
-    await tester.pumpAndSettle();
-    final initialPopup = tester.getRect(find.byType(TokenDetailPopup));
+      );
+      await tester.tap(find.byType(TokenDisplayWidget));
+      await tester.pumpAndSettle();
+      final initialPopup = tester.getRect(find.byType(TokenDetailPopup));
 
-    tester.view.physicalSize = const Size(700, 400);
-    await tester.pumpAndSettle();
-    expect(find.byType(TokenDetailPopup), findsOneWidget);
-    final resizedPopup = tester.getRect(find.byType(TokenDetailPopup));
-    final resizedAnchor = tester.getRect(find.byType(TokenDisplayWidget));
-    expect(resizedPopup, isNot(initialPopup));
-    expect(resizedAnchor.top - resizedPopup.bottom, closeTo(8, 0.01));
-    expect(resizedPopup.top, greaterThanOrEqualTo(38));
-    expect(resizedPopup.bottom, lessThanOrEqualTo(372));
-    expect(resizedPopup.left, greaterThanOrEqualTo(8));
-    expect(resizedPopup.right, lessThanOrEqualTo(692));
+      tester.view.physicalSize = const Size(700, 400);
+      await tester.pumpAndSettle();
+      expect(find.byType(TokenDetailPopup), findsOneWidget);
+      final resizedPopup = tester.getRect(find.byType(TokenDetailPopup));
+      final resizedAnchor = tester.getRect(find.byType(TokenDisplayWidget));
+      expect(resizedPopup, isNot(initialPopup));
+      expect(resizedAnchor.top - resizedPopup.bottom, closeTo(8, 0.01));
+      expect(resizedPopup.top, greaterThanOrEqualTo(38));
+      expect(resizedPopup.bottom, lessThanOrEqualTo(372));
+      expect(resizedPopup.left, greaterThanOrEqualTo(8));
+      expect(resizedPopup.right, lessThanOrEqualTo(692));
 
-    tester.view.viewInsets = const FakeViewPadding(bottom: 180);
-    await tester.pumpAndSettle();
-    expect(find.byType(TokenDetailPopup), findsOneWidget);
-    final keyboardPopup = tester.getRect(find.byType(TokenDetailPopup));
-    expect(keyboardPopup.top, greaterThanOrEqualTo(38));
-    expect(keyboardPopup.bottom, lessThanOrEqualTo(192));
-    expect(keyboardPopup.left, greaterThanOrEqualTo(8));
-    expect(keyboardPopup.right, lessThanOrEqualTo(692));
-    expect(tester.takeException(), isNull);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+      tester.view.viewInsets = const FakeViewPadding(bottom: 180);
+      await tester.pumpAndSettle();
+      expect(find.byType(TokenDetailPopup), findsOneWidget);
+      final keyboardPopup = tester.getRect(find.byType(TokenDetailPopup));
+      expect(keyboardPopup.top, greaterThanOrEqualTo(38));
+      expect(keyboardPopup.bottom, lessThanOrEqualTo(192));
+      expect(keyboardPopup.left, greaterThanOrEqualTo(8));
+      expect(keyboardPopup.right, lessThanOrEqualTo(692));
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
 
-  testWidgets('popup updates keyboard bounds without moving its anchor', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(400, 700);
-    tester.view.viewInsets = const FakeViewPadding(bottom: 180);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetViewInsets);
-    final settings = _PricedSettings();
-    addTearDown(settings.dispose);
-    await tester.pumpWidget(
-      _harness(
-        settings: settings,
-        child: const Stack(
-          children: [Positioned(top: 170, right: 16, child: _fullStats)],
+  testWidgets(
+    'popup updates keyboard bounds without moving its anchor',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(400, 700);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 180);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetViewInsets);
+      final settings = _PricedSettings();
+      addTearDown(settings.dispose);
+      await tester.pumpWidget(
+        _harness(
+          settings: settings,
+          child: const Stack(
+            children: [Positioned(top: 170, right: 16, child: _fullStats)],
+          ),
         ),
-      ),
-    );
-    await tester.tap(find.byType(TokenDisplayWidget));
-    await tester.pumpAndSettle();
-    final anchor = tester.getRect(find.byType(TokenDisplayWidget));
-    final beforePopup = tester.getRect(find.byType(TokenDetailPopup));
-    expect(beforePopup.bottom, greaterThan(332));
+      );
+      await tester.tap(find.byType(TokenDisplayWidget));
+      await tester.pumpAndSettle();
+      final anchor = tester.getRect(find.byType(TokenDisplayWidget));
+      final beforePopup = tester.getRect(find.byType(TokenDetailPopup));
+      expect(beforePopup.bottom, greaterThan(332));
 
-    tester.view.viewInsets = const FakeViewPadding(bottom: 360);
-    await tester.pumpAndSettle();
-    expect(tester.getRect(find.byType(TokenDisplayWidget)), anchor);
-    expect(find.byType(TokenDetailPopup), findsOneWidget);
-    final popup = tester.getRect(find.byType(TokenDetailPopup));
-    expect(popup.top, greaterThanOrEqualTo(8));
-    expect(popup.bottom, lessThanOrEqualTo(332));
-    expect(tester.takeException(), isNull);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+      tester.view.viewInsets = const FakeViewPadding(bottom: 360);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(TokenDisplayWidget)), anchor);
+      expect(find.byType(TokenDetailPopup), findsOneWidget);
+      final popup = tester.getRect(find.byType(TokenDetailPopup));
+      expect(popup.top, greaterThanOrEqualTo(8));
+      expect(popup.bottom, lessThanOrEqualTo(332));
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
 
   testWidgets(
     'popup follows message layout changes without rebuilding the token label',

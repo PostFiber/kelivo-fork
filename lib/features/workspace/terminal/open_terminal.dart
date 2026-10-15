@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
+import 'package:Kelivo/core/models/workspace_binding.dart';
 import 'package:Kelivo/core/providers/external_mounts_provider.dart';
 import 'package:Kelivo/core/providers/workspace_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
@@ -12,6 +13,7 @@ import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tools_service.dart';
 import 'package:Kelivo/features/workspace/terminal/terminal_page.dart';
 import 'package:Kelivo/features/workspace/terminal/terminal_session_manager.dart';
+import 'package:Kelivo/features/workspace/widgets/files/file_browser_ops.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart';
 import 'package:Kelivo/utils/app_directories.dart';
@@ -191,4 +193,64 @@ Future<void> openTerminal(
       ),
     ),
   );
+}
+
+/// Opens the [conversationId] workspace in the platform's own terminal.
+///
+/// For runtimes without a PTY, where the shell lives outside the app and needs
+/// a host directory rather than a sandbox path. The bound cwd is joined back
+/// onto the workspace host root so the shell starts where the conversation
+/// does. Warns instead of opening when no workspace is bound.
+Future<void> openSystemTerminalForConversation(
+  BuildContext context, {
+  String? conversationId,
+}) async {
+  final l10n = AppLocalizations.of(context)!;
+  final chat = context.read<ChatService>();
+  final workspaces = context.read<WorkspaceProvider>();
+  final runtime = context.read<WorkspaceRuntimeProvider>().runtime;
+  if (runtime == null) return;
+
+  final id = conversationId ?? chat.currentConversationId;
+  final binding = WorkspaceBinding.fromExtras(
+    id == null
+        ? const <String, dynamic>{}
+        : chat.getConversation(id)?.extras ?? const <String, dynamic>{},
+  );
+  final workspaceId = binding.workspaceId;
+  final workspace = workspaceId == null ? null : workspaces.byId(workspaceId);
+  if (workspace == null) {
+    showAppSnackBar(
+      context,
+      message: l10n.terminalBindWorkspaceFirst,
+      type: NotificationType.info,
+    );
+    return;
+  }
+
+  late final String cwd;
+  try {
+    final root = await workspaces.hostRootFor(workspace);
+    cwd = FileBrowserOps.joinInsideRoot(root, binding.cwd) ?? root;
+  } catch (error) {
+    if (!context.mounted) return;
+    showAppSnackBar(
+      context,
+      message: error.toString(),
+      type: NotificationType.error,
+    );
+    return;
+  }
+
+  if (!context.mounted) return;
+  try {
+    await runtime.openInSystemTerminal(cwd);
+  } catch (error) {
+    if (!context.mounted) return;
+    showAppSnackBar(
+      context,
+      message: error.toString(),
+      type: NotificationType.error,
+    );
+  }
 }

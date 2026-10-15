@@ -28,9 +28,6 @@ class DesktopWorkspaceBar extends StatelessWidget {
   static const double width = 320;
 
   static const Key emptyStateKey = ValueKey<String>('workspace-desk-bar-empty');
-  static const Key openTerminalKey = ValueKey<String>(
-    'workspace-desk-bar-open-terminal',
-  );
   static const Key revealKey = ValueKey<String>('workspace-desk-bar-reveal');
   static const Key manageKey = ValueKey<String>('workspace-desk-bar-manage');
   static const Key closeKey = ValueKey<String>('workspace-desk-bar-close');
@@ -79,8 +76,6 @@ class DesktopWorkspaceBar extends StatelessWidget {
               kind: workspace?.kind,
               running: running,
               showSystemActions: showSystemActions,
-              onOpenTerminal: () =>
-                  unawaited(_openSystemTerminal(context, workspace!)),
               onReveal: () => unawaited(_reveal(context, workspace!)),
               onClose: () {
                 unawaited(
@@ -119,34 +114,6 @@ class DesktopWorkspaceBar extends StatelessWidget {
     }
   }
 
-  Future<void> _openSystemTerminal(
-    BuildContext context,
-    Workspace workspace,
-  ) async {
-    final runtime = context.read<WorkspaceRuntimeProvider>().runtime;
-    if (runtime == null) return;
-    final hostDir = await _hostDir(context, workspace);
-    if (!context.mounted) return;
-    if (hostDir == null || hostDir.isEmpty) {
-      showAppSnackBar(
-        context,
-        message: AppLocalizations.of(context)!.terminalNotAvailable,
-        type: NotificationType.error,
-      );
-      return;
-    }
-    try {
-      await runtime.openInSystemTerminal(hostDir);
-    } catch (error) {
-      if (!context.mounted) return;
-      showAppSnackBar(
-        context,
-        message: error.toString(),
-        type: NotificationType.error,
-      );
-    }
-  }
-
   Future<void> _reveal(BuildContext context, Workspace workspace) async {
     final runtime = context.read<WorkspaceRuntimeProvider>().runtime;
     if (runtime == null) return;
@@ -172,7 +139,6 @@ class _Header extends StatelessWidget {
     required this.kind,
     required this.running,
     required this.showSystemActions,
-    required this.onOpenTerminal,
     required this.onReveal,
     required this.onClose,
   });
@@ -181,7 +147,6 @@ class _Header extends StatelessWidget {
   final WorkspaceKind? kind;
   final bool running;
   final bool showSystemActions;
-  final VoidCallback onOpenTerminal;
   final VoidCallback onReveal;
   final VoidCallback onClose;
 
@@ -230,18 +195,7 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          if (showSystemActions) ...[
-            Tooltip(
-              message: l10n.workspaceDeskOpenSystemTerminal,
-              child: IosIconButton(
-                key: DesktopWorkspaceBar.openTerminalKey,
-                icon: Lucide.Terminal,
-                size: 16,
-                minSize: 32,
-                semanticLabel: l10n.workspaceDeskOpenSystemTerminal,
-                onTap: onOpenTerminal,
-              ),
-            ),
+          if (showSystemActions)
             Tooltip(
               message: l10n.workspaceDeskReveal,
               child: IosIconButton(
@@ -253,7 +207,6 @@ class _Header extends StatelessWidget {
                 onTap: onReveal,
               ),
             ),
-          ],
           IosIconButton(
             key: DesktopWorkspaceBar.manageKey,
             icon: Lucide.Settings2,
