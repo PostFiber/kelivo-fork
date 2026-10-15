@@ -34,6 +34,7 @@ void main() {
     final workspace = Directory(p.join(tmp.path, 'ws'))..createSync();
     final session = Directory(p.join(tmp.path, 'session'))..createSync();
     final skills = Directory(p.join(tmp.path, 'skills'))..createSync();
+    final external = Directory(p.join(tmp.path, 'external'))..createSync();
     sandboxed = WorkspaceToolContext(
       workspace: Workspace(
         id: 'ws1',
@@ -48,6 +49,9 @@ void main() {
         workspaceHostRoot: workspace.path,
         sessionHostDir: session.path,
         skillsHostDir: skills.path,
+        externalMounts: [
+          Mount(host: external.path, guest: '/root/Notes', readOnly: true),
+        ],
       ),
       sessionDir: session,
       outputsDir: Directory(p.join(session.path, 'outputs'))..createSync(),
@@ -83,7 +87,7 @@ void main() {
       expect(fragment, contains('/chat'));
       expect(fragment, contains('/skills'));
       expect(fragment, contains('/tmp'));
-      expect(fragment, contains('- /mounts/<name>/'));
+      expect(fragment, contains('- /root/Notes — read-only'));
       expect(
         fragment.contains('from iOS Files'),
         platform == TargetPlatform.iOS,
@@ -93,13 +97,13 @@ void main() {
         fragment.contains('on-device folders'),
         platform == TargetPlatform.android,
       );
-      expect(fragment, contains('list /mounts/ first for external/user files'));
+      expect(fragment, contains('mounted paths are exactly these'));
       expect(
         fragment,
         contains('File tools reject writes to read-only mounts'),
       );
       expect(
-        fragment.indexOf('/mounts/<name>/'),
+        fragment.indexOf('/root/Notes'),
         lessThan(fragment.indexOf('cwd:')),
       );
       expect(fragment, isNot(contains('<external_mounts>')));

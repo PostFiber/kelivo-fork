@@ -111,7 +111,7 @@ Kelivo 不只是聊天。模型可以联网搜索、调用 MCP 服务器、按�
 - **工作区**：为对话绑定工作区后，模型可以使用 `shell`、`read_file`、`write_file`、`edit_file`、`list_dir`、`glob` 和 `grep` 七个工具。命令输出实时显示，文件修改以 diff 呈现；Shell 命令可以设为需要审批，按单条命令批准或在本次会话中全部允许。
 - **手机上的 Linux 沙盒**：Android 通过 PRoot 运行 Ubuntu、Debian 或 Alpine Linux，也可以导入自己的 rootfs 镜像；iOS 内置基于 iSH 的 Alpine Linux，无需额外下载。可在应用内安装 Python、Node.js、Git、SSH 等常用工具，并通过测速为 apt/apk、pip 和 npm 选择最快的镜像源。
 - **桌面端原生运行**：在 macOS、Windows 和 Linux 上，工具直接在系统 Shell 中运行，工作区可以是应用托管的文件夹，也可以链接电脑上的任意文件夹。
-- **文件与终端**：内置文件浏览器，可预览 Markdown、HTML、CSV、图片和文本。手机端提供应用内终端，桌面端可在系统终端中打开工作区。手机端还可以把最多 10 个外部文件夹以只读或读写方式挂载到沙盒中。
+- **文件与终端**：内置文件浏览器，可预览 Markdown、HTML、CSV、图片和文本。手机端提供应用内终端，桌面端可在系统终端中打开工作区。手机端还可以把外部文件夹以只读或读写方式挂载到沙盒中的自选路径。
 - **环境变量**：所有工作区共享，并可防止变量值出现在命令输出中。
 - **技能**：技能是包含 `SKILL.md` 的文件夹，可以通过粘贴 Markdown、导入 `.md` 或 `.zip` 文件、填写 GitHub 链接添加，并按助手或按对话启用。内置的 *skill-creator* 技能可以帮助模型编写新技能。
 - **MCP**：通过 Streamable HTTP、SSE 或 STDIO 连接 Model Context Protocol 服务器，支持 OAuth 登录、JSON 导入和按工具审批，并内置 fetch 服务器。STDIO 服务器在桌面端原生运行，在手机端运行于 Linux 沙盒中。
@@ -172,7 +172,7 @@ Kelivo 不只是聊天。模型可以联网搜索、调用 MCP 服务器、按�
 | 工作区运行环境 | Linux 沙盒（PRoot） | Linux 沙盒（iSH） | 本机 Shell |
 | Linux 发行版 | Ubuntu、Debian、Alpine 或导入的 rootfs | Alpine（内置） | — |
 | 终端 | 应用内终端 | 应用内终端 | 系统终端 |
-| 访问外部文件夹 | 最多挂载 10 个文件夹 | 最多挂载 10 个文件夹 | 链接任意本地文件夹 |
+| 访问外部文件夹 | 挂载任意本地文件夹到自选沙盒路径 | 挂载任意本地文件夹到自选沙盒路径 | 链接任意本地文件夹 |
 | STDIO 类型的 MCP | 在沙盒中运行 | 在沙盒中运行 | 本机运行 |
 | 定时任务 | ✓ | — | ✓ |
 | 后台生成 | 常驻通知、实时通知、任务悬浮窗 | 增强后台运行、实时活动 | Kelivo 运行期间 |

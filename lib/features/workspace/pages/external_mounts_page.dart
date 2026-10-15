@@ -33,10 +33,10 @@ String _mountError(AppLocalizations l10n, Object error) {
         return l10n.workspaceExternalStorageMessage;
       case 'external_mount_name':
         return l10n.workspaceMountInvalidName;
+      case 'external_mount_reserved':
+        return l10n.workspaceMountReserved;
       case 'external_mount_duplicate':
         return l10n.workspaceMountDuplicate;
-      case 'external_mount_limit':
-        return l10n.workspaceMountLimit;
       case 'external_mount_overlap':
         return l10n.workspaceMountOverlap;
       case 'external_mount_target_occupied':
@@ -86,9 +86,6 @@ class _ExternalMountsPageState extends State<ExternalMountsPage> {
     WorkspaceDirectory? directory;
     try {
       await provider.loaded;
-      if (provider.entries.length >= ExternalMountsProvider.maxMounts) {
-        throw const WorkspaceChannelException(code: 'external_mount_limit');
-      }
       if (!mounted) return;
       directory = await _pickDirectory(context, provider);
       if (directory == null || !mounted) return;
@@ -233,8 +230,8 @@ class _MountEditor extends StatefulWidget {
 }
 
 class _MountEditorState extends State<_MountEditor> {
-  late final _name = TextEditingController(
-    text: widget.mount?.name ?? p.basename(widget.directory!.path),
+  late final _guestPath = TextEditingController(
+    text: widget.mount?.guestPath ?? '',
   );
   late bool _readOnly = widget.mount?.readOnly ?? false;
   bool _busy = false;
@@ -242,7 +239,7 @@ class _MountEditorState extends State<_MountEditor> {
 
   @override
   void dispose() {
-    _name.dispose();
+    _guestPath.dispose();
     super.dispose();
   }
 
@@ -257,13 +254,13 @@ class _MountEditorState extends State<_MountEditor> {
       if (widget.mount case final mount?) {
         await provider.update(
           mount.id,
-          name: _name.text.trim(),
+          guestPath: _guestPath.text.trim(),
           readOnly: _readOnly,
         );
       } else {
         await provider.add(
           widget.directory!,
-          name: _name.text.trim(),
+          guestPath: _guestPath.text.trim(),
           readOnly: _readOnly,
         );
       }
@@ -291,7 +288,7 @@ class _MountEditorState extends State<_MountEditor> {
       if (directory == null) return;
       await provider.update(
         widget.mount!.id,
-        name: _name.text.trim(),
+        guestPath: _guestPath.text.trim(),
         readOnly: _readOnly,
         directory: directory,
       );
@@ -348,29 +345,20 @@ class _MountEditorState extends State<_MountEditor> {
       children: [
         Padding(
           padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${ExternalMount.root}/${_name.text.trim()}',
-                style: const TextStyle(fontFamily: 'monospace'),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                source,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
+          child: Text(
+            source,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
         SectionCard(
           children: [
             IosFormTextField(
-              label: l10n.workspacesNameLabel,
-              controller: _name,
+              label: l10n.workspaceMountPathLabel,
+              controller: _guestPath,
               inlineLabel: false,
+              hintText: l10n.workspaceMountPathHint,
               onChanged: (_) => setState(() {}),
             ),
           ],

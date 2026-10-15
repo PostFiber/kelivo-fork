@@ -169,6 +169,7 @@ static int kelivo_pty_write(struct tty *tty, const void *buf, size_t len, bool b
     dispatch_queue_t _spawnQueue;
     NSMutableDictionary<NSString *, NSString *> *_activeBinds;
     NSMutableDictionary<NSString *, NSNumber *> *_readOnlyBinds;
+    NSMutableSet<NSString *> *_createdGuestDirs;
     NSMutableDictionary<NSString *, KelivoISHPtySession *> *_ptyBySession;
     NSMutableDictionary<NSNumber *, KelivoISHPtySession *> *_ptyByPid;
     NSMutableDictionary<NSNumber *, KelivoISHPtySession *> *_ptyByTtyNum;
@@ -200,6 +201,7 @@ static int kelivo_pty_write(struct tty *tty, const void *buf, size_t len, bool b
         _spawnQueue = dispatch_queue_create("psyche.kelivo.workspace.ish.spawn", DISPATCH_QUEUE_SERIAL);
         _activeBinds = [NSMutableDictionary dictionary];
         _readOnlyBinds = [NSMutableDictionary dictionary];
+        _createdGuestDirs = [NSMutableSet set];
         _ptyBySession = [NSMutableDictionary dictionary];
         _ptyByPid = [NSMutableDictionary dictionary];
         _ptyByTtyNum = [NSMutableDictionary dictionary];
@@ -259,7 +261,7 @@ static int kelivo_pty_write(struct tty *tty, const void *buf, size_t len, bool b
     [self createDeviceNodes];
     [self applyRootfsPatchBundle];
     [self applyBundleOverlay];
-    [self ensureGuestDirs:@[@"/workspace", @"/chat", @"/skills", @"/mounts"]];
+    [self ensureGuestDirs:@[@"/workspace", @"/chat", @"/skills"]];
 
     do_mount(&procfs, "proc", "/proc", "", 0);
     do_mount(&devptsfs, "devpts", "/dev/pts", "", 0);
@@ -524,6 +526,14 @@ static void KelivoDnsReachabilityChanged(SCNetworkReachabilityRef target,
 
 #pragma mark - Bind mounts
 
+/// Whether the guest path already exists in the fakefs data tree. Compared
+/// through the host path because fakefs_bind_mount removes the destination.
+- (BOOL)guestDirectoryExists:(NSString *)linuxPath {
+    NSString *target = [_dataPath stringByAppendingPathComponent:linuxPath];
+    struct stat st;
+    return lstat(target.fileSystemRepresentation, &st) == 0;
+}
+
 - (int)bindMountPath:(NSString *)linuxPath toHostPath:(NSString *)hostPath readOnly:(BOOL)readOnly {
     if (!_isBooted) return -1;
     // fakefs_bind_mount recursively removes its destination before binding.
@@ -532,14 +542,9 @@ static void KelivoDnsReachabilityChanged(SCNetworkReachabilityRef target,
     if (targetError < 0) return targetError;
     NSFileManager *fm = [NSFileManager defaultManager];
     BOOL isDir = NO;
-    if (![fm fileExistsAtPath:hostPath isDirectory:&isDir]) {
-        if ([linuxPath hasPrefix:@"/mounts/"]) return -ENOENT;
-        NSError *error = nil;
-        if (![fm createDirectoryAtPath:hostPath withIntermediateDirectories:YES attributes:nil error:&error]) {
-            NSLog(@"KelivoISHKernel: host mkdir %@ failed: %@", hostPath, error);
-            return -1;
-        }
-    }
+    // A missing source is a stale grant, never a folder to invent.
+    if (![fm fileExistsAtPath:hostPath isDirectory:&isDir] || !isDir) return -ENOENT;
+    BOOL createdGuestDir = ![self guestDirectoryExists:linuxPath];
     struct task *prev = current;
     current = pid_get_task(1);
     [self ensureGuestParentDirs:linuxPath];
@@ -554,6 +559,7 @@ static void KelivoDnsReachabilityChanged(SCNetworkReachabilityRef target,
     }
     _activeBinds[linuxPath] = hostPath;
     _readOnlyBinds[linuxPath] = @(readOnly);
+    if (createdGuestDir) [_createdGuestDirs addObject:linuxPath];
     return 0;
 }
 
@@ -562,7 +568,9 @@ static void KelivoDnsReachabilityChanged(SCNetworkReachabilityRef target,
     int err = fakefs_bind_unmount(linuxPath.fileSystemRepresentation);
     [_activeBinds removeObjectForKey:linuxPath];
     [_readOnlyBinds removeObjectForKey:linuxPath];
-    if (err == 0 && [linuxPath hasPrefix:@"/mounts/"]) {
+    // Remove only placeholders this kernel created, never a pre-existing folder.
+    if (err == 0 && [_createdGuestDirs containsObject:linuxPath]) {
+        [_createdGuestDirs removeObject:linuxPath];
         struct task *prev = current;
         current = pid_get_task(1);
         generic_rmdirat(AT_PWD, linuxPath.fileSystemRepresentation);
@@ -619,7 +627,7 @@ static void KelivoDnsReachabilityChanged(SCNetworkReachabilityRef target,
     }
     NSSet *desired = [NSSet setWithArray:[binds valueForKey:@"guest"]];
     for (NSString *guest in [_activeBinds.allKeys copy]) {
-        if ([guest hasPrefix:@"/mounts/"] && ![desired containsObject:guest]) {
+        if (![desired containsObject:guest]) {
             int err = [self bindUnmountPath:guest];
             if (err < 0) return err;
         }

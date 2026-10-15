@@ -6,10 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/database/app_database.dart';
 import 'package:Kelivo/core/database/extension_entity_store.dart';
+import 'package:Kelivo/core/models/external_mount.dart';
 import 'package:Kelivo/core/models/workspace_directory_access.dart';
 import 'package:Kelivo/core/providers/external_mounts_provider.dart';
 import 'package:Kelivo/core/services/sandbox/workspace_channel.dart';
 import '../services/sandbox/sandbox_channel_harness.dart';
+
+Matcher rejects(String code) => throwsA(
+  isA<WorkspaceChannelException>().having((error) => error.code, 'code', code),
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +24,8 @@ void main() {
   late ExternalMountsProvider provider;
   late Map<String, String> sources;
   late List<Map<dynamic, dynamic>> native;
+  late String? rootfs;
+  late List<String> reserved;
   late List<String> released;
   var failNextMount = false;
 
@@ -33,6 +40,8 @@ void main() {
     store = ExtensionEntityStore(db);
     sources = {'a': '/storage/A', 'b': '/storage/B'};
     native = [];
+    rootfs = null;
+    reserved = [];
     released = [];
     failNextMount = false;
     harness = SandboxChannelHarness();
@@ -51,6 +60,8 @@ void main() {
             throw PlatformException(code: 'mount_failed');
           }
           native = [for (final item in args['mounts'] as List) item as Map];
+          rootfs = args['rootfsDir'] as String?;
+          reserved = (args['reservedPaths'] as List).cast<String>();
           return null;
         case 'releaseDirectory':
           released.add(args['token'] as String);
@@ -71,16 +82,25 @@ void main() {
   });
 
   test(
-    'mounts are independent, persistent, named and individually writable',
+    'mounts are independent, persistent, path-addressed and individually writable',
     () async {
-      await provider.add(directory('a'), name: 'Notes', readOnly: true);
-      await provider.add(directory('b'), name: 'Output', readOnly: false);
-      expect(native.map((m) => m['guest']), [
-        '/mounts/Notes',
-        '/mounts/Output',
-      ]);
+      await provider.add(
+        directory('a'),
+        guestPath: '/root/Notes',
+        readOnly: true,
+      );
+      await provider.add(
+        directory('b'),
+        guestPath: '/opt/data',
+        readOnly: false,
+      );
+      expect(native.map((m) => m['guest']), ['/root/Notes', '/opt/data']);
       expect(native.first['readOnly'], true);
       expect(native.last['readOnly'], isNot(true));
+      // Without a known rootfs the native side cannot check mount targets.
+      expect(rootfs, isNull);
+      // The reserved-path policy travels with the mounts; the runners apply it.
+      expect(reserved, ExternalMount.reservedGuestPaths);
       expect(
         await store.listByKind(ExtensionEntityStore.kindWorkspace),
         isEmpty,
@@ -88,30 +108,62 @@ void main() {
       provider.dispose();
       provider = ExternalMountsProvider(store: store, channel: harness.channel);
       await provider.loaded;
-      expect(provider.entries.map((m) => m.name), ['Notes', 'Output']);
+      expect(provider.entries.map((m) => m.guestPath), [
+        '/root/Notes',
+        '/opt/data',
+      ]);
+      expect(provider.entries.map((m) => m.name), ['Notes', 'data']);
       expect(provider.activeMounts.first.readOnly, true);
     },
   );
 
+  test('reports the rootfs location so targets can be checked', () async {
+    provider.dispose();
+    provider = ExternalMountsProvider(
+      store: store,
+      channel: harness.channel,
+      rootfsDir: () => '/data/kelivo/rootfs',
+    );
+    await provider.loaded;
+    await provider.add(
+      directory('a'),
+      guestPath: '/root/Notes',
+      readOnly: false,
+    );
+    expect(rootfs, '/data/kelivo/rootfs');
+  });
+
   test(
     'rename and toggle replace native snapshot; unmount releases only its grant',
     () async {
-      await provider.add(directory('a'), name: 'Notes', readOnly: false);
-      await provider.add(directory('b'), name: 'Output', readOnly: false);
+      await provider.add(
+        directory('a'),
+        guestPath: '/root/Notes',
+        readOnly: false,
+      );
+      await provider.add(
+        directory('b'),
+        guestPath: '/opt/data',
+        readOnly: false,
+      );
       final id = provider.entries.first.id;
-      await provider.update(id, name: 'Reference', readOnly: true);
-      expect(native.first['guest'], '/mounts/Reference');
+      await provider.update(id, guestPath: '/srv/reference', readOnly: true);
+      expect(native.first['guest'], '/srv/reference');
       expect(native.first['readOnly'], true);
       expect(released, isEmpty);
       await provider.remove(id);
-      expect(native.single['guest'], '/mounts/Output');
+      expect(native.single['guest'], '/opt/data');
       expect(released, ['a']);
       expect(sources['a'], '/storage/A');
     },
   );
 
   test('revoked access removes live binding and can be reselected', () async {
-    await provider.add(directory('a'), name: 'Notes', readOnly: true);
+    await provider.add(
+      directory('a'),
+      guestPath: '/root/Notes',
+      readOnly: true,
+    );
     final id = provider.entries.single.id;
     sources.remove('a');
     expect(await provider.resolveMounts(), isEmpty);
@@ -120,7 +172,7 @@ void main() {
     expect(provider.errorFor(id), isNotNull);
     await provider.update(
       id,
-      name: 'Notes',
+      guestPath: '/root/Notes',
       readOnly: true,
       directory: directory('b'),
     );
@@ -132,30 +184,37 @@ void main() {
   test(
     'failed runtime update rolls back the registry and persisted permission',
     () async {
-      await provider.add(directory('a'), name: 'Notes', readOnly: true);
+      await provider.add(
+        directory('a'),
+        guestPath: '/root/Notes',
+        readOnly: true,
+      );
       failNextMount = true;
       await expectLater(
         provider.update(
           provider.entries.single.id,
-          name: 'Changed',
+          guestPath: '/root/Changed',
           readOnly: false,
         ),
         throwsA(isA<WorkspaceChannelException>()),
       );
-      expect(provider.entries.single.name, 'Notes');
+      expect(provider.entries.single.guestPath, '/root/Notes');
       expect(provider.entries.single.readOnly, true);
       expect(native.single['readOnly'], true);
       final stored = await store.get(ExternalMountsProvider.kind, 'global');
-      expect((stored!.payload['mounts'] as List).single['name'], 'Notes');
+      expect(
+        (stored!.payload['mounts'] as List).single['guestPath'],
+        '/root/Notes',
+      );
       expect(released, isEmpty);
     },
   );
 
   test('moved folders stay manageable when saved mounts now overlap', () async {
     sources['c'] = '/storage/C';
-    await provider.add(directory('a'), name: 'A', readOnly: false);
-    await provider.add(directory('b'), name: 'B', readOnly: true);
-    await provider.add(directory('c'), name: 'C', readOnly: false);
+    await provider.add(directory('a'), guestPath: '/root/A', readOnly: false);
+    await provider.add(directory('b'), guestPath: '/root/B', readOnly: true);
+    await provider.add(directory('c'), guestPath: '/root/C', readOnly: false);
     final a = provider.entries[0].id;
     final b = provider.entries[1].id;
     final c = provider.entries[2].id;
@@ -176,7 +235,7 @@ void main() {
     sources['new'] = '/storage/New';
     await provider.update(
       c,
-      name: 'C',
+      guestPath: '/root/C',
       readOnly: false,
       directory: directory('new'),
     );
@@ -192,8 +251,16 @@ void main() {
     final writable = Directory('${root.path}/writable')..createSync();
     sources['a'] = locked.path;
     sources['b'] = writable.path;
-    await provider.add(directory('a'), name: 'Locked', readOnly: true);
-    await provider.add(directory('b'), name: 'Writable', readOnly: false);
+    await provider.add(
+      directory('a'),
+      guestPath: '/root/locked',
+      readOnly: true,
+    );
+    await provider.add(
+      directory('b'),
+      guestPath: '/root/writable',
+      readOnly: false,
+    );
     Link('${writable.path}/alias').createSync(locked.path);
     await expectLater(
       provider.requireWritableHostPaths(['${writable.path}/alias/sub/new.txt']),
@@ -202,7 +269,7 @@ void main() {
     await provider.requireWritableHostPaths(['${writable.path}/new.txt']);
     await provider.update(
       provider.entries.first.id,
-      name: 'Locked',
+      guestPath: '/root/locked',
       readOnly: false,
     );
     await provider.requireWritableHostPaths([
@@ -210,31 +277,140 @@ void main() {
     ]);
   });
 
-  test(
-    'rejects duplicate names, traversal, overlapping sources and mount limit',
-    () async {
-      await provider.add(directory('a'), name: 'Notes', readOnly: true);
-      for (final name in ['notes', '../bad', 'a/b', 'a:b', '.', ' bad']) {
-        await expectLater(
-          provider.add(directory('b'), name: name, readOnly: false),
-          throwsA(isA<WorkspaceChannelException>()),
-        );
-      }
-      sources['child'] = '/storage/A/child';
+  test('rejects unusable guest paths', () async {
+    await provider.add(
+      directory('a'),
+      guestPath: '/root/Notes',
+      readOnly: true,
+    );
+    for (final path in [
+      'root/Notes', // relative
+      '/root/Notes/', // trailing slash
+      '/root/../Notes', // not normalized
+      '/root/./Notes', // not normalized
+      '/root//Notes', // empty segment
+      '/root/No:tes', // PRoot's own -b delimiter
+      '/', // the guest root
+      '', // empty
+    ]) {
       await expectLater(
-        provider.add(directory('child'), name: 'Alias', readOnly: false),
-        throwsA(isA<WorkspaceChannelException>()),
+        provider.add(directory('b'), guestPath: path, readOnly: false),
+        rejects('external_mount_name'),
+        reason: path,
       );
-      expect(provider.entries, hasLength(1));
-      for (var i = 1; i < 10; i++) {
-        sources['$i'] = '/storage/folder$i';
-        await provider.add(directory('$i'), name: 'Folder$i', readOnly: false);
-      }
+    }
+    for (final path in ['/workspace', '/proc', '/dev/pts', '/etc/nginx']) {
       await expectLater(
-        provider.add(directory('b'), name: 'Overflow', readOnly: false),
-        throwsA(isA<WorkspaceChannelException>()),
+        provider.add(directory('b'), guestPath: path, readOnly: false),
+        rejects('external_mount_reserved'),
+        reason: path,
       );
-      expect(native, hasLength(10));
-    },
-  );
+    }
+    expect(provider.entries, hasLength(1));
+  });
+
+  test('rejects duplicate and nested mounts', () async {
+    await provider.add(
+      directory('a'),
+      guestPath: '/root/Notes',
+      readOnly: true,
+    );
+    await expectLater(
+      provider.add(directory('b'), guestPath: '/root/Notes', readOnly: false),
+      rejects('external_mount_duplicate'),
+    );
+    await expectLater(
+      provider.add(directory('b'), guestPath: '/ROOT/notes', readOnly: false),
+      rejects('external_mount_duplicate'),
+    );
+    for (final path in ['/root/Notes/inner', '/root']) {
+      await expectLater(
+        provider.add(directory('b'), guestPath: path, readOnly: false),
+        rejects('external_mount_overlap'),
+        reason: path,
+      );
+    }
+    // Renaming onto another mount's path is rejected too.
+    await provider.add(directory('b'), guestPath: '/opt/data', readOnly: false);
+    await expectLater(
+      provider.update(
+        provider.entries.first.id,
+        guestPath: '/opt/data/inner',
+        readOnly: false,
+      ),
+      rejects('external_mount_overlap'),
+    );
+    // Saving a mount under its own path is not a conflict with itself.
+    await provider.update(
+      provider.entries.first.id,
+      guestPath: '/root/Notes',
+      readOnly: false,
+    );
+    expect(provider.entries.map((m) => m.guestPath), [
+      '/root/Notes',
+      '/opt/data',
+    ]);
+  });
+
+  test('rejects overlapping sources and keeps any number of mounts', () async {
+    await provider.add(
+      directory('a'),
+      guestPath: '/root/Notes',
+      readOnly: true,
+    );
+    sources['child'] = '/storage/A/child';
+    await expectLater(
+      provider.add(
+        directory('child'),
+        guestPath: '/root/Alias',
+        readOnly: false,
+      ),
+      throwsA(isA<WorkspaceChannelException>()),
+    );
+    expect(provider.entries, hasLength(1));
+    for (var i = 1; i < 15; i++) {
+      sources['$i'] = '/storage/folder$i';
+      await provider.add(
+        directory('$i'),
+        guestPath: '/opt/folder$i',
+        readOnly: false,
+      );
+    }
+    expect(provider.entries, hasLength(15));
+    expect(native, hasLength(15));
+  });
+
+  test('rows that no longer parse are dropped, not fatal', () async {
+    await store.upsert(ExternalMountsProvider.kind, 'global', {
+      'mounts': [
+        // Pre-path rows carry a name instead of a guest path.
+        {
+          'id': 'legacy',
+          'name': 'Notes',
+          'access': const WorkspaceDirectoryAccess(
+            platform: 'android',
+            token: 'a',
+          ).toJson(),
+          'sourcePath': '/storage/A',
+          'readOnly': false,
+        },
+        {'id': 'truncated'},
+        {
+          'id': 'kept',
+          'guestPath': '/opt/data',
+          'access': const WorkspaceDirectoryAccess(
+            platform: 'android',
+            token: 'b',
+          ).toJson(),
+          'sourcePath': '/storage/B',
+          'readOnly': false,
+        },
+      ],
+    });
+    provider.dispose();
+    provider = ExternalMountsProvider(store: store, channel: harness.channel);
+    await provider.loaded;
+    expect(provider.entries.map((m) => m.guestPath), ['/opt/data']);
+    expect(native.single['guest'], '/opt/data');
+  });
 }

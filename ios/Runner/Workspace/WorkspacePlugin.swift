@@ -107,8 +107,21 @@ final class WorkspacePlugin: NSObject, FlutterStreamHandler {
     switch call.method {
     case "setExternalMounts":
       let args = call.arguments as? [String: Any] ?? [:]
-      let mounts = Self.parseBinds(args["mounts"])
-      guard mounts.count <= 10, mounts.allSatisfy(Self.validExternalMount), Set(mounts.compactMap { ($0["guest"] as? String)?.lowercased() }).count == mounts.count else {
+      // The reserved-path policy is required: a caller that omits it gets an
+      // error, never an unchecked bind.
+      guard let rawMounts = args["mounts"] as? [Any],
+        let reservedPaths = args["reservedPaths"] as? [String]
+      else {
+        result(
+          FlutterError(
+            code: "bad_args", message: "mounts and reservedPaths are required", details: nil))
+        return
+      }
+      let mounts = Self.parseBinds(rawMounts)
+      let guests = mounts.compactMap { ($0["guest"] as? String)?.lowercased() }
+      guard mounts.allSatisfy({ Self.bindableMount($0, reservedPaths: reservedPaths) }),
+        Set(guests).count == mounts.count, !Self.nestedGuests(guests)
+      else {
         result(FlutterError(code: "bad_args", message: "Invalid external mounts", details: nil))
         return
       }
@@ -527,24 +540,49 @@ final class WorkspacePlugin: NSObject, FlutterStreamHandler {
     flag(value) ? kCFBooleanTrue : kCFBooleanFalse
   }
 
-  private static func validExternalMount(_ mount: [String: Any]) -> Bool {
+  /// A mount this layer can bind: [reservedPaths] is the policy Dart sends with
+  /// the mounts, and the rest is what a bind argument can carry.
+  private static func bindableMount(_ mount: [String: Any], reservedPaths: [String]) -> Bool {
     guard let guest = mount["guest"] as? String, let host = mount["host"] as? String,
-      guest.hasPrefix("/mounts/"), host.hasPrefix("/"), !host.contains("\0") else { return false }
-    let name = String(guest.dropFirst("/mounts/".count))
-    return !name.isEmpty && name != "." && name != ".." &&
-      name == name.trimmingCharacters(in: .whitespacesAndNewlines) &&
-      name.rangeOfCharacter(from: CharacterSet(charactersIn: "/\\:").union(.controlCharacters)) == nil
+      host.hasPrefix("/"), !host.contains("\0"), !host.contains(":"), validGuestPath(guest)
+    else { return false }
+    return !reservedPaths.contains {
+      guest == $0 || guest.hasPrefix($0 + "/") || $0.hasPrefix(guest + "/")
+    }
   }
 
+  /// An absolute guest path, never the root, free of the separators a bind
+  /// argument cannot carry. Format policy (length, dots, slashes) is Dart's.
+  private static func validGuestPath(_ path: String) -> Bool {
+    guard path.hasPrefix("/"), path.count > 1 else { return false }
+    return path.rangeOfCharacter(
+      from: CharacterSet(charactersIn: ":\0").union(.controlCharacters)) == nil
+  }
+
+  private static func nestedGuests(_ guests: [String]) -> Bool {
+    for i in guests.indices {
+      for j in guests.indices where j > i {
+        if guests[i].hasPrefix(guests[j] + "/") || guests[j].hasPrefix(guests[i] + "/") {
+          return true
+        }
+      }
+    }
+    return false
+  }
+
+  /// Only the app's own roots reach the filesystem context: external mounts are
+  /// applied to the kernel by `setExternalMounts`, never per command.
+  private static let guestRoots: Set<String> = ["/workspace", "/chat", "/skills", "/tmp"]
+
   private func commandBinds(_ binds: [[String: Any]]) -> [[String: Any]] {
-    binds.filter { !(($0["guest"] as? String)?.hasPrefix("/mounts/") ?? false) }
+    binds.filter { Self.guestRoots.contains($0["guest"] as? String ?? "") }
   }
 
   private static func mountError(_ code: Int32) -> FlutterError {
     if code == KelivoISHMountTargetOccupied {
       return FlutterError(
         code: "external_mount_target_occupied",
-        message: "A mount target under /mounts already contains local files. Choose a different mount name or move those files first. No files were removed.",
+        message: "This guest path already contains files. Choose a different mount path or move those files first. No files were removed.",
         details: nil
       )
     }

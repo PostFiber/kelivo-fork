@@ -56,10 +56,10 @@ class MountWriteGuardsTest {
         val rootfs = temporary.newFolder("rootfs")
         val bin = File(rootfs, "usr/local/bin").apply { mkdirs() }
         val userCommand = File(bin, "cp").apply { writeText("user command") }
-        MountWriteGuards.install(rootfs, listOf(BindMount("/host/notes", "/mounts/Notes", true)))
+        MountWriteGuards.install(rootfs, listOf(BindMount("/host/notes", "/root/Notes", true)))
         assertEquals("user command", userCommand.readText())
         assertTrue(File(bin, "touch").canExecute())
-        assertEquals("/mounts/Notes\n", File(rootfs, "run/kelivo/mount-readonly-prefixes").readText())
+        assertEquals("/root/Notes\n", File(rootfs, "run/kelivo/mount-readonly-prefixes").readText())
         MountWriteGuards.install(rootfs, emptyList())
         assertEquals("user command", userCommand.readText())
         assertFalse(File(bin, "touch").exists())

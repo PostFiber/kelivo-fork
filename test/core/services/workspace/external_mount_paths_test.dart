@@ -8,7 +8,7 @@ void main() {
   late Directory root;
   late WorkspacePaths paths;
   late List<Mount> mounts;
-  const guest = '/mounts/My Notes';
+  const guest = '/root/My Notes';
   setUp(() async {
     root = await Directory.systemTemp.createTemp('kelivo_mounts_');
     for (final dir in ['ws', 'chat', 'skills', 'external', 'output']) {
@@ -16,7 +16,7 @@ void main() {
     }
     mounts = [
       Mount(host: '${root.path}/external', guest: guest, readOnly: true),
-      Mount(host: '${root.path}/output', guest: '/mounts/Output'),
+      Mount(host: '${root.path}/output', guest: '/opt/Output'),
     ];
     paths = WorkspacePaths.sandboxed(
       workspaceHostRoot: '${root.path}/ws',
@@ -29,30 +29,29 @@ void main() {
   });
   tearDown(() => root.delete(recursive: true));
 
-  test(
-    'maps multiple external roots, preserves workspace and lists mount parent',
-    () async {
-      final resolved = paths.resolve('$guest/note.txt', cwd: '/workspace');
-      expect(resolved.zone, WorkspaceZone.external);
-      expect(paths.toModelPath(resolved.hostPath), '$guest/note.txt');
-      expect(paths.modelRoot, '/workspace');
-      expect(paths.resolve('note.txt', cwd: guest).hostPath, resolved.hostPath);
-      expect(paths.mounts, hasLength(6));
-      final result = await HostFileTools(paths).listDir('/mounts', depth: 2);
+  test('maps multiple external roots and preserves the workspace', () async {
+    final resolved = paths.resolve('$guest/note.txt', cwd: '/workspace');
+    expect(resolved.zone, WorkspaceZone.external);
+    expect(paths.toModelPath(resolved.hostPath), '$guest/note.txt');
+    expect(paths.modelRoot, '/workspace');
+    expect(paths.resolve('note.txt', cwd: guest).hostPath, resolved.hostPath);
+    expect(paths.mounts, hasLength(6));
+    final result = await HostFileTools(paths).listDir(guest, depth: 2);
+    expect(result.entries.map((e) => e.path), contains('$guest/note.txt'));
+    // Only the four zones and the mount roots are addressable: a mount's own
+    // parent is not, which is why the prompt spells the mount paths out.
+    for (final outside in ['/root', '/root/Missing/file', '/opt']) {
       expect(
-        result.entries.map((e) => e.path),
-        containsAll([guest, '$guest/note.txt', '/mounts/Output']),
-      );
-      expect(
-        () => paths.resolve('$guest/../Output/file', cwd: '/workspace'),
+        () => paths.resolve(outside, cwd: '/workspace'),
         throwsA(isA<PathResolutionException>()),
+        reason: outside,
       );
-      expect(
-        () => paths.resolve('/mounts/Missing/file', cwd: '/workspace'),
-        throwsA(isA<PathResolutionException>()),
-      );
-    },
-  );
+    }
+    expect(
+      () => paths.resolve('$guest/../Output/file', cwd: '/workspace'),
+      throwsA(isA<PathResolutionException>()),
+    );
+  });
 
   test(
     'read-only denies edits, new files and symlink aliases; reads and writable mounts work',
@@ -79,7 +78,7 @@ void main() {
         File('${root.path}/external/note.txt').readAsStringSync(),
         'original',
       );
-      await tools.writeFile('/mounts/Output/result.txt', 'ok');
+      await tools.writeFile('/opt/Output/result.txt', 'ok');
       expect(File('${root.path}/output/result.txt').readAsStringSync(), 'ok');
     },
   );
@@ -98,7 +97,10 @@ void main() {
         throwsA(isA<HostFileException>()),
       );
       mounts = [];
-      expect((await tools.listDir('/mounts')).entries, isEmpty);
+      await expectLater(
+        tools.listDir(guest),
+        throwsA(isA<PathResolutionException>()),
+      );
       await expectLater(
         tools.readFile('$guest/note.txt'),
         throwsA(isA<PathResolutionException>()),

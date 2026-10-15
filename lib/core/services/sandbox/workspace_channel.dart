@@ -215,9 +215,19 @@ class WorkspaceChannel {
   Future<bool> hasDirectoryStorageAccess() async =>
       await _invoke('hasDirectoryStorageAccess') == true;
 
-  Future<void> setExternalMounts(List<BindMount> mounts) async {
+  /// [reservedPaths] is the guest-path policy the runner enforces: no mount may
+  /// cover one of them. Required, so no caller can bind without stating it.
+  /// [rootfsDir] lets the Android runner check that each mount target is free
+  /// before the first command runs; it is omitted while the rootfs is unknown.
+  Future<void> setExternalMounts(
+    List<BindMount> mounts, {
+    required List<String> reservedPaths,
+    String? rootfsDir,
+  }) async {
     await _invoke('setExternalMounts', {
       'mounts': [for (final mount in mounts) mount.toMap()],
+      'reservedPaths': reservedPaths,
+      if (rootfsDir != null) 'rootfsDir': rootfsDir,
     });
   }
 

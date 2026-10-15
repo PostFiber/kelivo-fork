@@ -761,11 +761,21 @@ class MyApp extends StatelessWidget {
         Provider<ExtensionEntityStore>.value(
           value: databaseLease.extensionEntityStore,
         ),
+        ChangeNotifierProvider(
+          create: (ctx) => EnvironmentProvider(
+            preferences: businessPreferences,
+            proxySettings: WorkspaceChannel.isSupportedPlatform
+                ? ctx.read<SettingsProvider>()
+                : null,
+          ),
+        ),
         if (WorkspaceChannel.isSupportedPlatform)
           ChangeNotifierProvider(
             lazy: false,
-            create: (ctx) =>
-                ExternalMountsProvider(store: ctx.read<ExtensionEntityStore>()),
+            create: (ctx) => ExternalMountsProvider(
+              store: ctx.read<ExtensionEntityStore>(),
+              rootfsDir: () => ctx.read<EnvironmentProvider>().state.rootfsDir,
+            ),
           ),
         ChangeNotifierProvider(
           create: (ctx) => WorkspaceProvider(
@@ -777,14 +787,6 @@ class MyApp extends StatelessWidget {
           create: (ctx) => SkillsService(
             store: ctx.read<ExtensionEntityStore>(),
             bundledAssets: rootBundle,
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (ctx) => EnvironmentProvider(
-            preferences: businessPreferences,
-            proxySettings: WorkspaceChannel.isSupportedPlatform
-                ? ctx.read<SettingsProvider>()
-                : null,
           ),
         ),
         ChangeNotifierProvider(create: (_) => _WorkspaceStackHolder()),

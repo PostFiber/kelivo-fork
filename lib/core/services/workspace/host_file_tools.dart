@@ -8,7 +8,6 @@ import 'package:path/path.dart' as p;
 import 'edit_matchers.dart';
 import 'unified_diff.dart';
 import 'workspace_paths.dart';
-import '../../models/external_mount.dart';
 
 class HostFileException implements Exception {
   const HostFileException(this.message);
@@ -312,28 +311,6 @@ class HostFileTools {
     String? cwd,
   }) async {
     await paths.refreshExternalMounts();
-    if (paths.sandboxed && p.posix.normalize(path) == ExternalMount.root) {
-      final entries = <ListDirEntry>[];
-      var truncated = false;
-      for (final mount in paths.externalMounts) {
-        final dir = Directory(mount.host);
-        final stat = await dir.stat();
-        entries.add(
-          ListDirEntry(
-            name: p.posix.basename(mount.guest),
-            path: mount.guest,
-            isDirectory: true,
-            size: 0,
-            modified: stat.modified,
-          ),
-        );
-        if (depth > 1) {
-          truncated = await _walkDir(dir, depth - 1, entries);
-          if (truncated) break;
-        }
-      }
-      return ListDirResult(entries: entries, truncated: truncated);
-    }
     final resolved = await _resolve(path.isEmpty ? '.' : path, cwd);
     final dir = Directory(resolved.hostPath);
     if (!await dir.exists()) {

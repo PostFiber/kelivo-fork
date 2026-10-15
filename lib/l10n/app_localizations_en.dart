@@ -11459,7 +11459,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceExternalMountSubtitle =>
-      'Selected folders are mounted at /mounts/<name> and shared across workspaces. AI tools, Shell and the file browser can access them. Up to 10 folders.';
+      'Selected folders are mounted at a sandbox path you choose, and shared across workspaces. AI tools, Shell and the file browser can access them.';
 
   @override
   String get workspaceExternalStorageTitle => 'Allow file access';
@@ -11519,23 +11519,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceMountInvalidName =>
-      'Use a name of up to 64 characters without slashes, colons or control characters. Do not use . or ..';
+      'Use an absolute path such as /root/project: no trailing slash, no .., no colons or control characters.';
 
   @override
-  String get workspaceMountDuplicate =>
-      'A mount with this name already exists.';
-
-  @override
-  String get workspaceMountLimit =>
-      'Up to 10 folders can be mounted. Remove a mount before adding another.';
+  String get workspaceMountDuplicate => 'Another mount already uses this path.';
 
   @override
   String get workspaceMountOverlap =>
-      'This folder overlaps an existing mount. Choose a different folder so permissions remain unambiguous.';
+      'This path or folder overlaps an existing mount. Choose a different one so permissions remain unambiguous.';
 
   @override
   String get workspaceMountTargetOccupied =>
-      'A mount target under /mounts already contains local files. Choose a different mount name or move those files first. No files were removed.';
+      'This path already contains files in the sandbox. Choose a different mount path or move those files first. No files were removed.';
+
+  @override
+  String get workspaceMountPathLabel => 'Path in sandbox';
+
+  @override
+  String get workspaceMountPathHint => 'e.g. /root/project';
+
+  @override
+  String get workspaceMountReserved =>
+      'This path belongs to the sandbox itself: the app\'s own folders, or system paths such as /dev, /proc, /sys or /etc.';
 
   @override
   String get workspaceEnvSystemImage => 'System image';

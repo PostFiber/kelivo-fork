@@ -12,7 +12,6 @@ import '../../../utils/mcp_structured_image.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../api/tool_call_cancellation.dart';
 import '../../models/workspace_binding.dart';
-import '../../models/external_mount.dart';
 import '../../models/environment_variable.dart';
 import '../../providers/external_mounts_provider.dart';
 import '../../providers/workspace_provider.dart';
@@ -398,17 +397,20 @@ class WorkspaceToolsService {
       final source = defaultTargetPlatform == TargetPlatform.iOS
           ? "from iOS Files (e.g. an Obsidian vault, Downloads, another app's iCloud container)"
           : 'from Environment settings (on-device folders)';
-      final readOnly = paths.externalMounts
-          .where((mount) => mount.readOnly)
-          .map((mount) => mount.guest)
-          .join(', ');
-      buf.writeln(
-        '- ${ExternalMount.root}/<name>/ — user-mounted external folders '
-        '$source, shared across workspaces. '
-        'Names and availability vary: list ${ExternalMount.root}/ first for external/user files. '
-        'File tools reject writes to read-only mounts; respect this in Shell too.'
-        '${readOnly.isEmpty ? '' : ' Read-only: $readOnly.'}',
-      );
+      if (paths.externalMounts.isNotEmpty) {
+        buf.writeln(
+          '- User-mounted external folders $source, shared across workspaces. '
+          'The mounted paths are exactly these:',
+        );
+        for (final mount in paths.externalMounts) {
+          buf.writeln(
+            '  - ${mount.guest} — ${mount.readOnly ? 'read-only' : 'writable'}',
+          );
+        }
+        buf.writeln(
+          'File tools reject writes to read-only mounts; respect this in Shell too.',
+        );
+      }
     }
     buf
       ..writeln('- $tmp — scratch (writable, ephemeral)')
@@ -1568,7 +1570,7 @@ class WorkspaceToolsService {
         WorkspacePaths.guestChat,
         WorkspacePaths.guestSkills,
         WorkspacePaths.guestTmp,
-        ExternalMount.root,
+        for (final mount in paths.externalMounts) mount.guest,
       ];
     }
     return [

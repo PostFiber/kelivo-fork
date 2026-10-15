@@ -639,19 +639,19 @@ void main() {
         final dir = Directory(p.join(tmp.path, 'external'))..createSync();
         final file = File(p.join(dir.path, 'note.txt'))
           ..writeAsStringSync('original');
-        const guest = '/mounts/Notes';
+        const guest = '/root/Notes';
         final context = ctx(
           sandboxed: true,
           externalMounts: [Mount(host: dir.path, guest: guest, readOnly: true)],
         );
         final prompt = WorkspaceToolsService.buildPromptFragment(context);
-        expect(prompt, contains('/mounts/<name>/'));
+        expect(prompt, contains('- $guest — read-only'));
         expect(
           prompt,
           contains('File tools reject writes to read-only mounts'),
         );
         expect(prompt, isNot(contains('<external_mounts>')));
-        expect(prompt, contains('Read-only: $guest.'));
+        expect(prompt, contains('mounted paths are exactly these'));
         expect(prompt, contains('respect this in Shell too'));
         final approval = _RecordingApproval();
         final result = await service().handle(
@@ -673,7 +673,7 @@ void main() {
         final dir = Directory(p.join(tmp.path, 'external'))..createSync();
         final file = File(p.join(dir.path, 'note.txt'))
           ..writeAsStringSync('original');
-        const guest = '/mounts/Notes';
+        const guest = '/root/Notes';
         var resolves = 0;
         List<Mount> current() => [
           Mount(host: dir.path, guest: guest, readOnly: resolves > 1),
@@ -995,13 +995,13 @@ void main() {
         externalMounts: [
           Mount(
             host: external.path,
-            guest: '/mounts/Data',
+            guest: '/root/Data',
             externalId: 'mount-1',
           ),
         ],
       );
       final tools = service();
-      for (final path in ['/mounts/Data/a.txt', '/chat/note.txt']) {
+      for (final path in ['/root/Data/a.txt', '/chat/note.txt']) {
         final result = metaOf(
           await tools.handle(context, 'write_file', {
             'path': path,
@@ -1011,14 +1011,14 @@ void main() {
         expect(result.files.single.isProduced, isTrue);
         expect(
           result.files.single.link,
-          path.startsWith('/mounts')
+          path.startsWith('/root')
               ? 'kelivo://mounts/mount-1/a.txt'
               : 'kelivo://session/note.txt',
         );
       }
       final listing = metaOf(
         await tools.handle(context, 'list_dir', {
-          'path': '/mounts/Data',
+          'path': '/root/Data',
         }, toolCallId: 'list'),
       );
       expect(listing.files.first.isDirectory, isTrue);
@@ -1026,7 +1026,7 @@ void main() {
       expect(listing.files.last.link, 'kelivo://mounts/mount-1/a.txt');
       final glob = metaOf(
         await tools.handle(context, 'glob', {
-          'path': '/mounts/Data',
+          'path': '/root/Data',
           'pattern': '*.txt',
         }, toolCallId: 'glob'),
       );

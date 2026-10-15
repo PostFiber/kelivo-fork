@@ -54,7 +54,7 @@ void main() {
           token: 'folder',
         ),
       ),
-      name: 'Notes',
+      guestPath: '/root/Notes',
       readOnly: true,
     );
   });
@@ -123,17 +123,18 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('edit independent mount name and permission', (tester) async {
+  testWidgets('edit independent mount path and permission', (tester) async {
     await showPage(tester);
-    expect(find.textContaining('/mounts/Notes'), findsOneWidget);
+    expect(find.textContaining('/root/Notes'), findsOneWidget);
     await tester.tap(find.text('Notes'));
     await settle(tester);
     final field = find.byType(EditableText);
-    await tester.enterText(field, 'Vault');
+    await tester.enterText(field, '/srv/Vault');
     final l10n = AppLocalizations.of(tester.element(field))!;
     await tester.tap(find.text(l10n.workspaceMountAllowWrite));
     await tester.tap(find.text(l10n.workspaceFilesSave));
     await settle(tester);
+    expect(provider.entries.single.guestPath, '/srv/Vault');
     expect(provider.entries.single.name, 'Vault');
     expect(provider.entries.single.readOnly, false);
     debugDefaultTargetPlatformOverride = null;
@@ -147,7 +148,7 @@ void main() {
       harness.handler = (call) {
         if (call.method == 'setExternalMounts') {
           final mounts = (call.arguments as Map)['mounts'] as List;
-          if (mounts.any((mount) => mount['guest'] == '/mounts/Occupied')) {
+          if (mounts.any((mount) => mount['guest'] == '/root/Occupied')) {
             throw PlatformException(code: 'external_mount_target_occupied');
           }
         }
@@ -158,14 +159,14 @@ void main() {
       await settle(tester);
       final field = find.byType(EditableText);
       final l10n = AppLocalizations.of(tester.element(field))!;
-      await tester.enterText(field, 'Occupied');
+      await tester.enterText(field, '/root/Occupied');
       await tester.tap(find.text(l10n.workspaceFilesSave));
       await settle(tester);
-      expect(provider.entries.single.name, 'Notes');
-      expect(provider.activeMounts.single.guest, '/mounts/Notes');
+      expect(provider.entries.single.guestPath, '/root/Notes');
+      expect(provider.activeMounts.single.guest, '/root/Notes');
       expect(find.text(l10n.workspaceMountTargetOccupied), findsOneWidget);
       expect(find.byType(EditableText), findsOneWidget);
-      await tester.enterText(field, 'Available');
+      await tester.enterText(field, '/root/Available');
       await tester.tap(find.text(l10n.workspaceFilesSave));
       await settle(tester);
       expect(provider.entries.single.name, 'Available');
@@ -190,7 +191,7 @@ void main() {
     expect(browser.readOnly, true);
     expect(
       browser.modelPathOf('${root.path}/note.txt'),
-      '/mounts/Notes/note.txt',
+      '/root/Notes/note.txt',
     );
     expect(find.text('note.txt'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
@@ -225,7 +226,7 @@ void main() {
               token: 'writable',
             ),
           ),
-          name: 'Writable',
+          guestPath: '/root/Writable',
           readOnly: false,
         ),
       );
@@ -301,7 +302,7 @@ void main() {
       await tester.runAsync(
         () => provider.update(
           provider.entries.first.id,
-          name: 'Notes',
+          guestPath: '/root/Notes',
           readOnly: false,
         ),
       );

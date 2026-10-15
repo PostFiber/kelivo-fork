@@ -6,6 +6,7 @@ import 'package:Kelivo/core/database/app_database.dart';
 import 'package:Kelivo/core/database/business_preferences.dart';
 import 'package:Kelivo/core/database/business_repository.dart';
 import 'package:Kelivo/core/models/environment_state.dart';
+import 'package:Kelivo/core/models/external_mount.dart';
 import 'package:Kelivo/core/models/workspace.dart';
 import 'package:Kelivo/core/models/workspace_binding.dart';
 import 'package:Kelivo/core/providers/environment_provider.dart';
@@ -136,23 +137,32 @@ void main() {
       final binds = [
         BindMount(
           host: external.path,
-          guest: '/mounts/cold-start-test',
+          guest: '/root/cold-start-test',
           readOnly: true,
         ),
       ];
       try {
-        await channel.setExternalMounts(binds);
-        await channel.setExternalMounts(binds);
+        await channel.setExternalMounts(
+          binds,
+          reservedPaths: ExternalMount.reservedGuestPaths,
+        );
+        await channel.setExternalMounts(
+          binds,
+          reservedPaths: ExternalMount.reservedGuestPaths,
+        );
         // Exercise both boot entry points in separate fresh app runs.
         if (!const bool.fromEnvironment('KELIVO_TEST_IMPLICIT_BOOT')) {
           await channel.boot();
         }
-        final first = await runCmd('cat /mounts/cold-start-test/identity');
+        final first = await runCmd('cat /root/cold-start-test/identity');
         expect(first.exit.exitCode, 0, reason: first.stderr);
         expect(first.stdout, 'cold-mounted');
-        await channel.setExternalMounts(binds);
+        await channel.setExternalMounts(
+          binds,
+          reservedPaths: ExternalMount.reservedGuestPaths,
+        );
         final denied = await runCmd(
-          'printf changed > /mounts/cold-start-test/identity',
+          'printf changed > /root/cold-start-test/identity',
         );
         expect(denied.exit.exitCode, isNot(0));
         expect(
@@ -160,7 +170,10 @@ void main() {
           'cold-mounted',
         );
       } finally {
-        await channel.setExternalMounts([]);
+        await channel.setExternalMounts(
+          [],
+          reservedPaths: ExternalMount.reservedGuestPaths,
+        );
         await external.delete(recursive: true);
       }
     });

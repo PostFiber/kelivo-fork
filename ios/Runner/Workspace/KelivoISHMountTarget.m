@@ -7,7 +7,6 @@
 const int KelivoISHMountTargetOccupied = -1101;
 
 int KelivoISHValidateMountTarget(NSString *dataPath, NSString *guestPath) {
-    if (![guestPath hasPrefix:@"/mounts/"]) return 0;
     NSString *target = [dataPath stringByAppendingPathComponent:guestPath];
     struct stat st;
     if (lstat(target.fileSystemRepresentation, &st) < 0) {

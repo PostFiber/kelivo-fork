@@ -78,13 +78,11 @@ void main() {
         'kelivo://session/notes': '/chat/notes',
         'kelivo://skills/skill-id': '/skills/skill-id',
         'kelivo://tmp/build': '/tmp/build',
-        'kelivo://mounts/mount-id/reports': '/mounts/Renamed/reports',
+        'kelivo://mounts/mount-id/reports': '/root/Renamed/reports',
       };
       for (final entry in cases.entries) {
         expect(
-          KelivoLink.tryParse(
-            entry.key,
-          )!.guestPath(mountRoot: '/mounts/Renamed'),
+          KelivoLink.tryParse(entry.key)!.guestPath(mountRoot: '/root/Renamed'),
           entry.value,
         );
       }
@@ -471,7 +469,7 @@ void main() {
                 token: 'grant',
               ),
             ),
-            name: 'Data',
+            guestPath: '/root/Data',
             readOnly: true,
           );
           final paths = WorkspacePaths.sandboxed(
@@ -481,7 +479,7 @@ void main() {
             externalMounts: mounts.activeMounts,
           );
           final link = WorkspaceToolsService.linkFor(
-            await paths.resolveReal('/mounts/Data/报告.txt', cwd: '/workspace'),
+            await paths.resolveReal('/root/Data/报告.txt', cwd: '/workspace'),
             paths: paths,
           )!;
           final parsed = KelivoLink.tryParse(link)!;
@@ -490,7 +488,11 @@ void main() {
             workspaces: workspaces,
             externalMounts: mounts,
           );
-          await mounts.update(parsed.mountId!, name: 'Renamed', readOnly: true);
+          await mounts.update(
+            parsed.mountId!,
+            guestPath: '/root/Renamed',
+            readOnly: true,
+          );
           expect(
             (await mountResolver.resolveToHostFile(
               parsed,
@@ -535,7 +537,7 @@ void main() {
                 token: 'grant',
               ),
             ),
-            name: 'Data',
+            guestPath: '/root/Data',
             readOnly: true,
           );
           expect(

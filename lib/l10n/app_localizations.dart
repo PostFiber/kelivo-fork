@@ -20514,7 +20514,7 @@ abstract class AppLocalizations {
   /// No description provided for @workspaceExternalMountSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Selected folders are mounted at /mounts/<name> and shared across workspaces. AI tools, Shell and the file browser can access them. Up to 10 folders.'**
+  /// **'Selected folders are mounted at a sandbox path you choose, and shared across workspaces. AI tools, Shell and the file browser can access them.'**
   String get workspaceExternalMountSubtitle;
 
   /// No description provided for @workspaceExternalStorageTitle.
@@ -20622,32 +20622,44 @@ abstract class AppLocalizations {
   /// No description provided for @workspaceMountInvalidName.
   ///
   /// In en, this message translates to:
-  /// **'Use a name of up to 64 characters without slashes, colons or control characters. Do not use . or ..'**
+  /// **'Use an absolute path such as /root/project: no trailing slash, no .., no colons or control characters.'**
   String get workspaceMountInvalidName;
 
   /// No description provided for @workspaceMountDuplicate.
   ///
   /// In en, this message translates to:
-  /// **'A mount with this name already exists.'**
+  /// **'Another mount already uses this path.'**
   String get workspaceMountDuplicate;
-
-  /// No description provided for @workspaceMountLimit.
-  ///
-  /// In en, this message translates to:
-  /// **'Up to 10 folders can be mounted. Remove a mount before adding another.'**
-  String get workspaceMountLimit;
 
   /// No description provided for @workspaceMountOverlap.
   ///
   /// In en, this message translates to:
-  /// **'This folder overlaps an existing mount. Choose a different folder so permissions remain unambiguous.'**
+  /// **'This path or folder overlaps an existing mount. Choose a different one so permissions remain unambiguous.'**
   String get workspaceMountOverlap;
 
   /// No description provided for @workspaceMountTargetOccupied.
   ///
   /// In en, this message translates to:
-  /// **'A mount target under /mounts already contains local files. Choose a different mount name or move those files first. No files were removed.'**
+  /// **'This path already contains files in the sandbox. Choose a different mount path or move those files first. No files were removed.'**
   String get workspaceMountTargetOccupied;
+
+  /// No description provided for @workspaceMountPathLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Path in sandbox'**
+  String get workspaceMountPathLabel;
+
+  /// No description provided for @workspaceMountPathHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. /root/project'**
+  String get workspaceMountPathHint;
+
+  /// No description provided for @workspaceMountReserved.
+  ///
+  /// In en, this message translates to:
+  /// **'This path belongs to the sandbox itself: the app\'s own folders, or system paths such as /dev, /proc, /sys or /etc.'**
+  String get workspaceMountReserved;
 
   /// No description provided for @workspaceEnvSystemImage.
   ///

@@ -73,8 +73,21 @@ class WorkspacePlugin(private val context: Context) {
                         RootfsInfo.inspect(File(requiredString(args, "rootfsDir")), requiredString(args, "arch"))
                     }
                     "setExternalMounts" -> {
-                        val next = parseBinds(asMap(call.arguments)["mounts"])
-                        validateExternalMounts(next)
+                        val args = asMap(call.arguments)
+                        // The reserved-path policy comes from Dart; a caller
+                        // that omits it gets an error, never an unchecked bind.
+                        require(args["mounts"] is List<*> && args["reservedPaths"] is List<*>) {
+                            "mounts and reservedPaths are required"
+                        }
+                        val next = parseBinds(args["mounts"])
+                        validateExternalMounts(next, parseStringList(args["reservedPaths"]))
+                        val rootfs = args["rootfsDir"]?.toString()
+                            ?.takeIf { it.isNotEmpty() }
+                            ?.let(::File)
+                        if (rootfs != null) {
+                            MountPoints.requireFreeTargets(rootfs, next)
+                            MountPoints.release(rootfs, next)
+                        }
                         if (next != externalMounts) {
                             execRunner.cancelAll()
                             ptySessions.closeAll()
@@ -142,6 +155,8 @@ class WorkspacePlugin(private val context: Context) {
                     "freeSpace" -> result.success(freeSpace(asMap(call.arguments)))
                     else -> result.notImplemented()
                 }
+            } catch (error: MountTargetOccupiedException) {
+                result.error("external_mount_target_occupied", error.message, null)
             } catch (error: IllegalArgumentException) {
                 result.error("invalid_args", error.message, null)
             } catch (error: Exception) {
@@ -354,20 +369,15 @@ class WorkspacePlugin(private val context: Context) {
 
     private fun commandBinds(args: Map<*, *>): List<BindMount> {
         val rootfs = File(requiredString(args, "rootfsDir"))
-        val mountRoot = File(rootfs, "mounts")
-        require(mountRoot.canonicalPath.startsWith(rootfs.canonicalPath + "/"))
-        mountRoot.mkdirs()
-        val names = externalMounts.map { it.guest.substringAfterLast('/') }.toSet()
-        // Only remove empty placeholders left by renamed or detached mounts.
-        mountRoot.listFiles()?.filter { it.name !in names && it.isDirectory && it.list()?.isEmpty() == true }?.forEach { it.delete() }
-        for (mount in externalMounts) {
-            val target = File(mountRoot, mount.guest.substringAfterLast('/'))
-            require(target.canonicalFile.parentFile == mountRoot.canonicalFile)
-            target.mkdirs()
+        val mounts = externalMounts
+        // PRoot does not create bind targets, and mounts may be configured
+        // before the rootfs is installed, so this runs on every command.
+        MountPoints.ensure(rootfs, mounts)
+        MountWriteGuards.install(rootfs, mounts)
+        val perCall = parseBinds(args["binds"]).filterNot { bind ->
+            // The app's mounts win over a per-call bind on the same path.
+            mounts.any { bind.guest == it.guest || bind.guest.startsWith(it.guest + "/") }
         }
-        MountWriteGuards.install(rootfs, externalMounts)
-        return parseBinds(args["binds"]).filterNot {
-            it.guest.startsWith("/mounts/")
-        } + externalMounts
+        return perCall + mounts
     }
 }

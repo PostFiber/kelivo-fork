@@ -118,14 +118,16 @@ object ProotCommand {
 }
 
 
-internal fun validateExternalMounts(mounts: List<BindMount>) {
-    val prefix = "/mounts/"
-    require(mounts.size <= 10 && mounts.map { it.guest.lowercase() }.distinct().size == mounts.size)
+internal fun validateExternalMounts(mounts: List<BindMount>, reservedPaths: List<String>) {
+    require(mounts.map { it.guest.lowercase() }.distinct().size == mounts.size)
     for (mount in mounts) {
-        require(mount.guest.startsWith(prefix))
-        val name = mount.guest.removePrefix(prefix)
-        require(name.isNotEmpty() && name == name.trim() && name != "." && name != "..")
-        require(name.none { it == '/' || it == '\\' || it == ':' || it.code < 32 || it.code == 127 })
+        require(validGuestPath(mount.guest))
+        require(!coversReservedPath(reservedPaths, mount.guest))
         require(File(mount.host).isAbsolute && mount.host.none { it == ':' || it == '\u0000' })
+    }
+    for (i in mounts.indices) {
+        for (j in i + 1 until mounts.size) {
+            require(!nestedGuestPaths(mounts[i].guest, mounts[j].guest))
+        }
     }
 }

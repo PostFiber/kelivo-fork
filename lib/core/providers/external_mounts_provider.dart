@@ -15,16 +15,22 @@ import '../services/workspace/workspace_paths.dart';
 /// Environment-level mounts, independent of the current workspace or chat.
 class ExternalMountsProvider extends ChangeNotifier
     with WidgetsBindingObserver {
-  ExternalMountsProvider({required this.store, WorkspaceChannel? channel})
-    : channel = channel ?? WorkspaceChannel() {
+  ExternalMountsProvider({
+    required this.store,
+    WorkspaceChannel? channel,
+    this.rootfsDir,
+  }) : channel = channel ?? WorkspaceChannel() {
     loaded = _load();
     WidgetsBinding.instance.addObserver(this);
   }
 
   static const kind = 'externalMounts';
-  static const maxMounts = 10;
   final ExtensionEntityStore store;
   final WorkspaceChannel channel;
+
+  /// Sandbox rootfs location, used by the native side to reject a mount whose
+  /// guest target already holds files. Null while the environment is unknown.
+  final String? Function()? rootfsDir;
   late final Future<void> loaded;
   bool _disposed = false;
   List<ExternalMount> _entries = [];
@@ -44,10 +50,19 @@ class ExternalMountsProvider extends ChangeNotifier
 
   Future<void> _load() async {
     final entity = await store.get(kind, 'global');
-    _entries = [
-      for (final raw in entity?.payload['mounts'] as List? ?? [])
-        ExternalMount.fromJson(Map<String, dynamic>.from(raw as Map)),
-    ];
+    // One unreadable row must not take down the whole registry: skip it and
+    // keep the mounts that still parse.
+    final entries = <ExternalMount>[];
+    for (final raw in entity?.payload['mounts'] as List? ?? []) {
+      try {
+        entries.add(
+          ExternalMount.fromJson(Map<String, dynamic>.from(raw as Map)),
+        );
+      } catch (error) {
+        debugPrint('Dropping unreadable external mount: $error');
+      }
+    }
+    _entries = entries;
     await _resolve();
     _notify();
   }
@@ -74,8 +89,17 @@ class ExternalMountsProvider extends ChangeNotifier
     final resolved = <ExternalMount>[];
     for (final entry in _entries) {
       try {
-        if (!ExternalMount.validName(entry.name)) {
-          throw StateError('Invalid mount name');
+        final guest = entry.guestPath;
+        if (!ExternalMount.validGuestPath(guest) ||
+            ExternalMount.reservedGuestPath(guest)) {
+          throw StateError('Unusable mount path: $guest');
+        }
+        if (_entries.any(
+          (other) =>
+              other.id != entry.id &&
+              ExternalMount.nestedGuestPaths(other.guestPath, guest),
+        )) {
+          throw StateError('Mount path nests another mount: $guest');
         }
         final directory = await channel.resolveDirectory(entry.access);
         final next = entry.copyWith(
@@ -115,14 +139,18 @@ class ExternalMountsProvider extends ChangeNotifier
         }
       }
     }
-    await channel.setExternalMounts([
-      for (final mount in active.values)
-        BindMount(
-          host: mount.host,
-          guest: mount.guest,
-          readOnly: mount.readOnly,
-        ),
-    ]);
+    await channel.setExternalMounts(
+      [
+        for (final mount in active.values)
+          BindMount(
+            host: mount.host,
+            guest: mount.guest,
+            readOnly: mount.readOnly,
+          ),
+      ],
+      reservedPaths: ExternalMount.reservedGuestPaths,
+      rootfsDir: rootfsDir?.call(),
+    );
     _active = active.values.toList();
     final statusChanged = !mapEquals(_errors, errors);
     _errors = errors;
@@ -163,32 +191,36 @@ class ExternalMountsProvider extends ChangeNotifier
     _notify();
   }
 
-  void _validateName(String name, {String? excluding}) {
-    if (!ExternalMount.validName(name)) {
+  void _validateGuestPath(String guestPath, {String? excluding}) {
+    if (!ExternalMount.validGuestPath(guestPath)) {
       throw const WorkspaceChannelException(code: 'external_mount_name');
     }
-    if (_entries.any(
-      (m) => m.id != excluding && m.name.toLowerCase() == name.toLowerCase(),
-    )) {
-      throw const WorkspaceChannelException(code: 'external_mount_duplicate');
+    if (ExternalMount.reservedGuestPath(guestPath)) {
+      throw const WorkspaceChannelException(code: 'external_mount_reserved');
+    }
+    for (final mount in _entries) {
+      if (mount.id == excluding) continue;
+      if (mount.guestPath.toLowerCase() == guestPath.toLowerCase()) {
+        throw const WorkspaceChannelException(code: 'external_mount_duplicate');
+      }
+      if (ExternalMount.nestedGuestPaths(mount.guestPath, guestPath)) {
+        throw const WorkspaceChannelException(code: 'external_mount_overlap');
+      }
     }
   }
 
   Future<void> add(
     WorkspaceDirectory directory, {
-    required String name,
+    required String guestPath,
     required bool readOnly,
   }) => _serial(() async {
-    _validateName(name);
-    if (_entries.length >= maxMounts) {
-      throw const WorkspaceChannelException(code: 'external_mount_limit');
-    }
+    _validateGuestPath(guestPath);
     final id = const Uuid().v4();
     await _replace([
       ..._entries,
       ExternalMount(
         id: id,
-        name: name,
+        guestPath: guestPath,
         access: directory.access,
         sourcePath: directory.path,
         readOnly: readOnly,
@@ -198,11 +230,11 @@ class ExternalMountsProvider extends ChangeNotifier
 
   Future<void> update(
     String id, {
-    required String name,
+    required String guestPath,
     required bool readOnly,
     WorkspaceDirectory? directory,
   }) => _serial(() async {
-    _validateName(name, excluding: id);
+    _validateGuestPath(guestPath, excluding: id);
     final entry = byId(id);
     if (entry == null) throw StateError('Mount was removed');
     await _replace([
@@ -211,7 +243,7 @@ class ExternalMountsProvider extends ChangeNotifier
           m
         else
           m.copyWith(
-            name: name,
+            guestPath: guestPath,
             readOnly: readOnly,
             access: directory?.access,
             sourcePath: directory?.path,

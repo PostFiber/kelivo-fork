@@ -10967,7 +10967,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workspaceExternalMountSubtitle =>
-      '所选文件夹挂载到 /mounts/<name>，供各工作区的 AI 工具、Shell 和文件浏览器访问。最多挂载 10 个文件夹。';
+      '所选文件夹挂载到沙箱中自选的路径，供各工作区的 AI 工具、Shell 和文件浏览器访问。';
 
   @override
   String get workspaceExternalStorageTitle => '允许访问文件';
@@ -11026,20 +11026,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workspaceMountInvalidName =>
-      '名称最多 64 个字符，不能包含斜杠、冒号或控制字符，也不能为 . 或 ..。';
+      '请填写绝对路径，如 /root/project：不能以斜杠结尾，不能包含 ..、冒号或控制字符。';
 
   @override
-  String get workspaceMountDuplicate => '已存在同名挂载。';
+  String get workspaceMountDuplicate => '已有挂载使用此路径。';
 
   @override
-  String get workspaceMountLimit => '最多挂载 10 个文件夹，请先卸载一个挂载。';
-
-  @override
-  String get workspaceMountOverlap => '此文件夹与已有挂载相同或互相包含。请选择其他文件夹，以避免权限冲突。';
+  String get workspaceMountOverlap =>
+      '此路径或文件夹与已有挂载重叠（相同、互相包含，或位于其路径之内）。请换一个，避免权限冲突。';
 
   @override
   String get workspaceMountTargetOccupied =>
-      '/mounts 下的同名位置已有本地文件。请更换挂载名称，或先移走这些文件。原有文件未被删除。';
+      '该路径在沙箱中已有文件。请更换挂载路径，或先移走这些文件。原有文件未被删除。';
+
+  @override
+  String get workspaceMountPathLabel => '沙箱内路径';
+
+  @override
+  String get workspaceMountPathHint => '例如 /root/project';
+
+  @override
+  String get workspaceMountReserved =>
+      '该路径属于沙箱自身：应用自己的目录，或 /dev、/proc、/sys、/etc 等系统路径。';
 
   @override
   String get workspaceEnvSystemImage => '系统镜像';
@@ -23355,7 +23363,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workspaceExternalMountSubtitle =>
-      '所选文件夹挂载到 /mounts/<name>，供各工作区的 AI 工具、Shell 和文件浏览器访问。最多挂载 10 个文件夹。';
+      '所选文件夹挂载到沙箱中自选的路径，供各工作区的 AI 工具、Shell 和文件浏览器访问。';
 
   @override
   String get workspaceExternalStorageTitle => '允许访问文件';
@@ -23414,20 +23422,28 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workspaceMountInvalidName =>
-      '名称最多 64 个字符，不能包含斜杠、冒号或控制字符，也不能为 . 或 ..。';
+      '请填写绝对路径，如 /root/project：不能以斜杠结尾，不能包含 ..、冒号或控制字符。';
 
   @override
-  String get workspaceMountDuplicate => '已存在同名挂载。';
+  String get workspaceMountDuplicate => '已有挂载使用此路径。';
 
   @override
-  String get workspaceMountLimit => '最多挂载 10 个文件夹，请先卸载一个挂载。';
-
-  @override
-  String get workspaceMountOverlap => '此文件夹与已有挂载相同或互相包含。请选择其他文件夹，以避免权限冲突。';
+  String get workspaceMountOverlap =>
+      '此路径或文件夹与已有挂载重叠（相同、互相包含，或位于其路径之内）。请换一个，避免权限冲突。';
 
   @override
   String get workspaceMountTargetOccupied =>
-      '/mounts 下的同名位置已有本地文件。请更换挂载名称，或先移走这些文件。原有文件未被删除。';
+      '该路径在沙箱中已有文件。请更换挂载路径，或先移走这些文件。原有文件未被删除。';
+
+  @override
+  String get workspaceMountPathLabel => '沙箱内路径';
+
+  @override
+  String get workspaceMountPathHint => '例如 /root/project';
+
+  @override
+  String get workspaceMountReserved =>
+      '该路径属于沙箱自身：应用自己的目录，或 /dev、/proc、/sys、/etc 等系统路径。';
 
   @override
   String get workspaceEnvSystemImage => '系统镜像';
@@ -35820,7 +35836,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workspaceExternalMountSubtitle =>
-      '所選資料夾掛載至 /mounts/<name>，供各工作區的 AI 工具、Shell 和檔案瀏覽器存取。最多掛載 10 個資料夾。';
+      '所選資料夾掛載至沙箱中自選的路徑，供各工作區的 AI 工具、Shell 和檔案瀏覽器存取。';
 
   @override
   String get workspaceExternalStorageTitle => '允許存取檔案';
@@ -35879,20 +35895,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workspaceMountInvalidName =>
-      '名稱最多 64 個字元，不能包含斜線、冒號或控制字元，也不能為 . 或 ..。';
+      '請填寫絕對路徑，如 /root/project：不能以斜線結尾，不能包含 ..、冒號或控制字元。';
 
   @override
-  String get workspaceMountDuplicate => '已存在同名掛載。';
+  String get workspaceMountDuplicate => '已有掛載使用此路徑。';
 
   @override
-  String get workspaceMountLimit => '最多掛載 10 個資料夾，請先卸載一個掛載。';
-
-  @override
-  String get workspaceMountOverlap => '此資料夾與已有掛載相同或互相包含。請選擇其他資料夾，以避免權限衝突。';
+  String get workspaceMountOverlap =>
+      '此路徑或資料夾與已有掛載重疊（相同、互相包含，或位於其路徑之內）。請換一個，避免權限衝突。';
 
   @override
   String get workspaceMountTargetOccupied =>
-      '/mounts 下的同名位置已有本機檔案。請更換掛載名稱，或先移走這些檔案。原有檔案未被刪除。';
+      '該路徑在沙箱中已有檔案。請更換掛載路徑，或先移走這些檔案。原有檔案未被刪除。';
+
+  @override
+  String get workspaceMountPathLabel => '沙箱內路徑';
+
+  @override
+  String get workspaceMountPathHint => '例如 /root/project';
+
+  @override
+  String get workspaceMountReserved =>
+      '該路徑屬於沙箱自身：應用程式自己的目錄，或 /dev、/proc、/sys、/etc 等系統路徑。';
 
   @override
   String get workspaceEnvSystemImage => '系統映像';
