@@ -51,6 +51,7 @@ import 'stream_controller.dart' as stream_ctrl;
 import 'generation_controller.dart';
 import 'scroll_controller.dart' as scroll_ctrl;
 import 'home_view_model.dart';
+import '../services/composer_command.dart';
 import '../services/context_usage_service.dart';
 import '../services/message_builder_service.dart';
 import '../services/message_generation_service.dart';
@@ -1381,6 +1382,31 @@ class HomePageController extends ChangeNotifier {
     }
     if (currentConversation == null) {
       await _createNewConversation();
+    }
+
+    // A command runs in the workspace's shell instead of the model. The send
+    // itself stays ordinary — the generation path turns the message into the
+    // tool round — so all that is decided here is whether it can run at all.
+    final command = composerCommandOf(input);
+    final commandConversationId =
+        submissionConversation?.id ?? currentConversation?.id;
+    if (command != null && commandConversationId != null) {
+      if (!_context.mounted) return ChatInputSubmissionResult.rejected;
+      final canRun = await composerCommandCanRunIn(
+        _context,
+        conversationId: commandConversationId,
+      );
+      if (!canRun) {
+        // Keep the command in the composer: a bound workspace makes it runnable.
+        if (_context.mounted) {
+          showAppSnackBar(
+            _context,
+            message: AppLocalizations.of(_context)!.terminalBindWorkspaceFirst,
+            type: NotificationType.info,
+          );
+        }
+        return ChatInputSubmissionResult.rejected;
+      }
     }
 
     final result = await _viewModel.sendMessage(input);

@@ -29,6 +29,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../core/models/assistant_regex.dart';
 import '../services/ask_user_interaction_service.dart';
+import '../services/composer_command.dart';
 import '../../chat/utils/thinking_tag_parser.dart';
 import '../services/context_usage_service.dart';
 import '../services/message_generation_service.dart';
@@ -1396,7 +1397,7 @@ class ChatActions {
       if (!_activeAssistantMessages.isActive(assistantMessage)) {
         return;
       }
-      await _executeGeneration(ctx);
+      await _executeGeneration(ctx, composerCommand: composerCommandOf(input));
     } catch (e) {
       await handleSendGenerationFailure(
         error: e,
@@ -2149,7 +2150,14 @@ class ChatActions {
   // ============================================================================
 
   /// Execute generation with the given context.
-  Future<void> _executeGeneration(stream_ctrl.GenerationContext ctx) async {
+  ///
+  /// [composerCommand] is the shell command the message asks for. It stands in
+  /// for the model's answer: the request is never made, and the local tool
+  /// round takes its place.
+  Future<void> _executeGeneration(
+    stream_ctrl.GenerationContext ctx, {
+    String? composerCommand,
+  }) async {
     final state = stream_ctrl.StreamingState(
       ctx,
       responsesTurnPrefix: chatService.getProviderArtifactForMessage(
@@ -2249,31 +2257,41 @@ class ChatActions {
       }
 
       state.requestStartedAt = DateTime.now();
-      final stream = ChatApiService.sendMessageStream(
-        config: ctx.config,
-        modelId: ctx.modelId,
-        messages: ctx.apiMessages,
-        userImagePaths: ctx.userImagePaths,
-        reasoning: selectReasoningRequest(
-          settings: ctx.settings,
+      // A composer command replaces the answer the model would have given.
+      // Without a tool handler able to run it there is nothing to stand in
+      // with, so the message goes to the model like any other.
+      final handler = onToolCall;
+      final command = composerCommand;
+      final Stream<StreamChunk> stream;
+      if (command != null && handler != null) {
+        stream = composerCommandStream(command: command, onToolCall: handler);
+      } else {
+        stream = ChatApiService.sendMessageStream(
           config: ctx.config,
           modelId: ctx.modelId,
-          assistant: assistant,
-        ),
-        temperature: assistant?.temperature,
-        topP: assistant?.topP,
-        maxTokens: assistant?.maxTokens,
-        tools: ctx.toolDefs.isEmpty ? null : ctx.toolDefs,
-        onToolCall: onToolCall,
-        extraHeaders: ctx.extraHeaders,
-        extraBody: ctx.extraBody,
-        stream: ctx.streamOutput,
-        requestId: conversationId,
-        conversationId: conversationId,
-        allowImagesApiRouting: ctx.allowImagesApiRouting,
-        ocrActive: ctx.ocrActive,
-        parseMarkdownImageLinks: ctx.settings.sendMarkdownImageLinksAsImages,
-      );
+          messages: ctx.apiMessages,
+          userImagePaths: ctx.userImagePaths,
+          reasoning: selectReasoningRequest(
+            settings: ctx.settings,
+            config: ctx.config,
+            modelId: ctx.modelId,
+            assistant: assistant,
+          ),
+          temperature: assistant?.temperature,
+          topP: assistant?.topP,
+          maxTokens: assistant?.maxTokens,
+          tools: ctx.toolDefs.isEmpty ? null : ctx.toolDefs,
+          onToolCall: onToolCall,
+          extraHeaders: ctx.extraHeaders,
+          extraBody: ctx.extraBody,
+          stream: ctx.streamOutput,
+          requestId: conversationId,
+          conversationId: conversationId,
+          allowImagesApiRouting: ctx.allowImagesApiRouting,
+          ocrActive: ctx.ocrActive,
+          parseMarkdownImageLinks: ctx.settings.sendMarkdownImageLinksAsImages,
+        );
+      }
 
       if (!ctx.streamOutput) {
         // HTTP JSON responses still emit tool rounds. Consume them as they
